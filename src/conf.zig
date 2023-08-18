@@ -29,10 +29,10 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
         try parse(allocator, cfgfile, &cfgmap);
         defer allocator.free(cfgfile);
     } else {
-        var fz = try findZigVersion(allocator) orelse @panic("Unable to find zig executable");
-        var fzz = try allocator.dupe(u8, fz);
-        try cfgmap.put("default", fzz);
-        try save(allocator, home, &cfgmap);
+        const fz = try findZigVersion(allocator) orelse @panic("Unable to find zig executable");
+        const ck = try allocator.dupe(u8, "default");
+        try cfgmap.put(ck, fz);
+        try save(home, &cfgmap);
     }
 
     return cfgmap;
@@ -49,21 +49,22 @@ pub fn deinit(allocator: std.mem.Allocator, cfgmap: *std.StringHashMap([]const u
     cfgmap.deinit();
 }
 
-pub fn save(allocator: std.mem.Allocator, home: []const u8, cfgmap: *std.StringHashMap([]const u8)) !void {
+pub fn save(home: []const u8, cfgmap: *std.StringHashMap([]const u8)) !void {
     var homedir = try std.fs.openDirAbsolute(home, .{});
     defer homedir.close();
 
-    var out: []const u8 = "";
-    var it = cfgmap.keyIterator();
+    var file = homedir.openFile(".zigdconfig", .{}) catch blk: {
+        break :blk try homedir.createFile(".zigdconfig", .{});
+    };
+    var buffered = std.io.bufferedWriter(file.writer());
 
-    while (it.next()) |key_| {
-        var key = key_.*;
-        var value = cfgmap.get(key) orelse continue;
-        var line = try std.fmt.allocPrint(allocator, "{s}={s}\n", .{ key, value });
-        out = try std.mem.concat(allocator, u8, &.{ out, line });
+    var it = cfgmap.iterator();
+
+    while (it.next()) |p| {
+        try buffered.writer().print("{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
     }
 
-    try homedir.writeFile(".zigdconfig", out);
+    try buffered.flush();
     return;
 }
 
@@ -85,22 +86,14 @@ pub fn parse(allocator: std.mem.Allocator, file: []const u8, cfgmap: *std.String
     }
 }
 
+// https://github.com/zigtools/zls/blob/adcc6862f7680a2fd079d7feba51af6ddc57a35b/src/configuration.zig#L176
 pub fn findZigVersion(allocator: std.mem.Allocator) !?[]const u8 {
-    const env_path = std.process.getEnvVarOwned(allocator, "PATH") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => {
-            return null;
-        },
-        else => return err,
-    };
+    const env_path = try std.process.getEnvVarOwned(allocator, "PATH");
     defer allocator.free(env_path);
-
-    const exe_extension = builtin.target.exeFileExt();
-    const zig_exe = try std.fmt.allocPrint(allocator, "zig{s}", .{exe_extension});
-    defer allocator.free(zig_exe);
 
     var it = std.mem.tokenize(u8, env_path, &[_]u8{std.fs.path.delimiter});
     while (it.next()) |path| {
-        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ path, zig_exe });
+        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ path, "zig" });
         defer allocator.free(full_path);
 
         if (!std.fs.path.isAbsolute(full_path)) continue;
@@ -109,9 +102,8 @@ pub fn findZigVersion(allocator: std.mem.Allocator) !?[]const u8 {
         defer file.close();
         const stat = file.stat() catch continue;
         if (stat.kind == .directory) continue;
-
-        const lastSlash = std.mem.lastIndexOf(u8, path[0 .. path.len - 2], "/") orelse return null;
-        const version = path[lastSlash + 1 .. path.len - 1];
+        const lastSlash = std.mem.lastIndexOfScalar(u8, path[0 .. path.len - 1], '/') orelse @panic("Unable to find slash");
+        const version = path[lastSlash + 1 ..];
         return try allocator.dupe(u8, version);
     }
     return null;
