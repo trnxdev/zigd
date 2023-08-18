@@ -1,7 +1,7 @@
 const std = @import("std");
 const mode = @import("builtin").mode;
 const zigd = @import("./zigd.zig");
-
+const config = @import("./conf.zig");
 const run = @import("./utils.zig").run;
 const fromHome = @import("./utils.zig").fromHome;
 
@@ -37,11 +37,32 @@ pub fn main() !void {
         }
     }
 
-    const zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch {
-        std.debug.print("Did not find zigd.ver in current directory, exiting...\n", .{});
+    var cfg = try config.load(allocator, home);
+    defer config.deinit(allocator, &cfg) catch {};
+
+    var needtofree_ = true;
+
+    const zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch blk: {
+        var absolutecwd = try std.fs.cwd().realpathAlloc(allocator, ".");
+        defer allocator.free(absolutecwd);
+
+        if (cfg.contains(absolutecwd)) {
+            needtofree_ = false;
+            break :blk cfg.get(absolutecwd) orelse unreachable;
+        }
+
+        if (!cfg.contains("default")) {
+            @panic("No default version set in config file, and no zigd.ver file found in current directory.");
+        }
+
+        var default = cfg.get("default").?;
+        try exec(allocator, default, args);
         return;
     };
-    defer allocator.free(zig_version);
+
+    if (needtofree_) {
+        defer allocator.free(zig_version);
+    }
 
     const zig_binary = try try_get_bin: {
         var zig_binary_0 = try fromHome(home, "zig");
@@ -58,6 +79,10 @@ pub fn main() !void {
 
     defer allocator.free(zig_binary);
 
+    try exec(allocator, zig_binary, args);
+}
+
+fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !void {
     var nargs = std.ArrayList([]const u8).init(allocator);
     defer nargs.deinit();
     try nargs.append(zig_binary);
