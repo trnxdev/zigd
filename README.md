@@ -33,3 +33,4 @@
 - [ ] Clean-Up Code
 - [x] Auto-Install Zig
 - [ ] Support for VSCode zls plugin
+- [x] Support for config (partially?)
