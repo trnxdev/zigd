@@ -37,7 +37,10 @@ pub fn main() !void {
         }
     }
 
-    const zig_version = try std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21);
+    const zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch {
+        std.debug.print("Did not find zigd.ver in current directory, exiting...\n", .{});
+        return;
+    };
     defer allocator.free(zig_version);
 
     const zig_binary = try try_get_bin: {
