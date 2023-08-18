@@ -29,8 +29,9 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
         try parse(allocator, cfgfile, &cfgmap);
         defer allocator.free(cfgfile);
     } else {
-        var fz = try findZig(allocator) orelse @panic("Unable to find zig executable");
-        try cfgmap.put("default", fz);
+        var fz = try findZigVersion(allocator) orelse @panic("Unable to find zig executable");
+        var fzz = try allocator.dupe(u8, fz);
+        try cfgmap.put("default", fzz);
         try save(allocator, home, &cfgmap);
     }
 
@@ -75,6 +76,8 @@ pub fn parse(allocator: std.mem.Allocator, file: []const u8, cfgmap: *std.String
         var key = std.mem.trim(u8, line[0..indexofs], &std.ascii.whitespace);
         var value = std.mem.trim(u8, line[indexofs + 1 ..], &std.ascii.whitespace);
 
+        if (key[0] == '#') continue;
+
         var dupedkey = try allocator.dupe(u8, key);
         var dupedvalue = try allocator.dupe(u8, value);
 
@@ -82,7 +85,7 @@ pub fn parse(allocator: std.mem.Allocator, file: []const u8, cfgmap: *std.String
     }
 }
 
-pub fn findZig(allocator: std.mem.Allocator) !?[]const u8 {
+pub fn findZigVersion(allocator: std.mem.Allocator) !?[]const u8 {
     const env_path = std.process.getEnvVarOwned(allocator, "PATH") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => {
             return null;
@@ -107,7 +110,9 @@ pub fn findZig(allocator: std.mem.Allocator) !?[]const u8 {
         const stat = file.stat() catch continue;
         if (stat.kind == .directory) continue;
 
-        return try allocator.dupe(u8, full_path);
+        const lastSlash = std.mem.lastIndexOf(u8, path[0 .. path.len - 2], "/") orelse return null;
+        const version = path[lastSlash + 1 .. path.len - 1];
+        return try allocator.dupe(u8, version);
     }
     return null;
 }

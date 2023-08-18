@@ -7,6 +7,12 @@ const fromHome = @import("./utils.zig").fromHome;
 
 const cmd = enum { install };
 
+fn if_free(allocator: std.mem.Allocator, needtofree: bool, ptr: []const u8) void {
+    if (needtofree) {
+        allocator.free(ptr);
+    }
+}
+
 pub fn main() !void {
     var gpa = if (mode == .Debug) std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = if (mode == .Debug) gpa.deinit();
@@ -43,26 +49,23 @@ pub fn main() !void {
     var needtofree_ = true;
 
     const zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch blk: {
+        needtofree_ = false;
+
         var absolutecwd = try std.fs.cwd().realpathAlloc(allocator, ".");
         defer allocator.free(absolutecwd);
 
         if (cfg.contains(absolutecwd)) {
-            needtofree_ = false;
             break :blk cfg.get(absolutecwd) orelse unreachable;
         }
 
-        if (!cfg.contains("default")) {
-            @panic("No default version set in config file, and no zigd.ver file found in current directory.");
+        if (cfg.contains("default")) {
+            break :blk cfg.get("default") orelse unreachable;
         }
 
-        var default = cfg.get("default").?;
-        try exec(allocator, default, args);
-        return;
+        @panic("No default/workspace version set in config file, and no zigd.ver file found in current directory.");
     };
 
-    if (needtofree_) {
-        defer allocator.free(zig_version);
-    }
+    defer if_free(allocator, needtofree_, zig_version);
 
     const zig_binary = try try_get_bin: {
         var zig_binary_0 = try fromHome(home, "zig");
