@@ -29,7 +29,7 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
         try parse(allocator, cfgfile, &cfgmap);
         defer allocator.free(cfgfile);
     } else {
-        const fz = try findZigVersion(allocator) orelse @panic("Unable to find zig executable");
+        const fz = try findZigVersion(allocator) orelse @panic("Unable to find a zig executable");
         const ck = try allocator.dupe(u8, "default");
         try cfgmap.put(ck, fz);
         try save(home, cfgmap);

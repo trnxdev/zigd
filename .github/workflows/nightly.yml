@@ -1,0 +1,50 @@
+name: Nightly
+
+on:
+  push:
+    branches: [ "main" ]
+
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install libarchive
+      run: sudo apt update && sudo apt install libarchive-dev
+    - name: Install zig
+      run: wget https://ziglang.org/builds/zig-0.12.0-dev.140+e078324db.tar.xz && tar xzvf zig-0.12.0-dev.140+e078324db.tar.xz
+    - name: Compile
+      run:  ./zig-linux-x86_64-0.12.0-dev.140+e078324db/zig build
+    - name: Upload
+      uses: actions/upload-artifact@v3
+      with:
+        name: zigd-linux
+        path: ./zig-out/bin/zigd
+        
+
+  Publish:
+    runs-on: ubuntu-latest
+    needs: [Build]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download zigd-linux artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: zigd-linux
+
+      - name: Release
+        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: false
+          prerelease: false
+          tag_name: nightly-${{ github.sha }}
+          name: Nightly Build ${{ github.sha }}
+          files: zigd-linux
