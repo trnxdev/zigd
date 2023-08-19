@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const run = @import("./utils.zig").run;
 const fromHome = @import("./utils.zig").fromHome;
+const tarC = @import("./C/tar.zig");
 
 const arch = switch (builtin.cpu.arch) {
     .x86_64 => "x86_64",
@@ -50,14 +51,6 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
 
     var downloaddir = try fromHome(home, "Downloads");
 
-    zigdir.makeDir(version) catch {
-        std.debug.print("Zig version already exists, if you wish to reinstall it, remove the directory first\nIf that's not the case, well talk about it in Github Issues or smthn.", .{});
-        return std.process.exit(0);
-    };
-
-    const zigstr = try zigdir.realpathAlloc(allocator, version);
-    defer allocator.free(zigstr);
-
     const friendlyname = try std.mem.concat(allocator, u8, &.{ "zigd-", os, "-", arch, "-", version, ".", archive_ext });
     defer allocator.free(friendlyname);
 
@@ -66,10 +59,23 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     const fpstr = try downloaddir.realpathAlloc(allocator, friendlyname);
     defer allocator.free(fpstr);
 
-    _ = try run(allocator, &[_][]const u8{ "tar", "xf", fpstr, "-C", zigstr, "--strip-components", "1" });
+    _ = try tarC.extractTarXZ(fpstr);
+
+    const fx = try std.fmt.allocPrint(allocator, "zig-" ++ url_platform ++ "-" ++ "{s}", .{version});
+    defer allocator.free(fx);
+
+    var _lastp = try zigdir.makeOpenPath(version, .{});
+    defer _lastp.close();
+
+    const lastp = try _lastp.realpathAlloc(allocator, ".");
+    defer allocator.free(lastp);
+
+    // zig-linux-x86_64-0.12.0-dev.126+387b0ac4f -> version
+    try std.fs.cwd().rename(fx, lastp);
 
     var _binpath = try zigdir.openDir(version, .{});
+    defer _binpath.close();
+
     const binpath = try _binpath.realpathAlloc(allocator, "zig");
-    _binpath.close();
     return binpath;
 }
