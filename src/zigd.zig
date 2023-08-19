@@ -41,21 +41,21 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     try req.finish();
     try req.wait();
 
-    if (req.response.status != .ok) {
+    if (req.response.status != .ok)
         @panic("Response was not ok!");
-    }
 
     var zigdir = try fromHome(home, "zig");
+    _ = zigdir;
 
     const data = try req.reader().readAllAlloc(allocator, 2 << 50);
     defer allocator.free(data);
 
-    var downloaddir = try fromHome(home, "Downloads");
-
     const friendlyname = try std.mem.concat(allocator, u8, &.{ "zigd-", os, "-", arch, "-", version, ".", archive_ext });
     defer allocator.free(friendlyname);
 
+    var downloaddir = try fromHome(home, "Downloads");
     try downloaddir.writeFile(friendlyname, data);
+    defer downloaddir.close();
 
     const fpstr = try downloaddir.realpathAlloc(allocator, friendlyname);
     defer allocator.free(fpstr);
@@ -65,20 +65,14 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     const fx = try std.fmt.allocPrint(allocator, "zig-" ++ url_platform ++ "-" ++ "{s}", .{version});
     defer allocator.free(fx);
 
-    var _lastp = try zigdir.makeOpenPath(version, .{});
-    defer _lastp.close();
-
-    const lastp = try _lastp.realpathAlloc(allocator, ".");
+    const lastp = try std.fs.path.join(allocator, &.{ home, "zig", version });
     defer allocator.free(lastp);
 
-    // zig-linux-x86_64-0.12.0-dev.126+387b0ac4f -> version
+    // zig-linux-x86_64-0.12.0-dev.126+387b0ac4f -> 0.12.0-dev.126+387b0ac4f
     try std.fs.cwd().rename(fx, lastp);
 
-    var _binpath = try zigdir.openDir(version, .{});
-    defer _binpath.close();
-
-    const binpath = try _binpath.realpathAlloc(allocator, "zig");
-    return binpath;
+    var _binpath = try std.fs.path.join(allocator, &.{ lastp, "zig" });
+    return _binpath;
 }
 
 pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []const u8) !void {
@@ -95,10 +89,10 @@ pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []con
 
     d.value_ptr.* = try allocator.dupe(u8, version);
 
-    var homedir = try std.fs.openDirAbsolute(home, .{});
-    defer homedir.close();
+    const path = try std.fs.path.join(allocator, &.{ home, "zig" });
+    defer allocator.free(path);
 
-    var zigdir = try homedir.openDir("zig", .{});
+    var zigdir = try std.fs.openDirAbsolute(path, .{});
     defer zigdir.close();
 
     var z = zigdir.openDir(version, .{}) catch b: {

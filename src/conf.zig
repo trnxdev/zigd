@@ -55,12 +55,16 @@ pub fn save(home: []const u8, cfgmap: std.StringHashMap([]const u8)) !void {
 
     var buf: [4096]u8 = undefined;
     var it = cfgmap.iterator();
+    var l: usize = 0;
 
     while (it.next()) |p| {
-        _ = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
+        var u = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
+        l += u.len;
     }
 
-    try homedir.writeFile(".zigdconfig", &buf);
+    var nbuf = buf[0..l];
+
+    try homedir.writeFile(".zigdconfig", nbuf);
     return;
 }
 
