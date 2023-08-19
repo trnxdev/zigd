@@ -47,4 +47,4 @@ jobs:
           prerelease: false
           tag_name: nightly-${{ github.sha }}
           name: Nightly Build ${{ github.sha }}
-          files: zigd-linux
+          files: zigd
