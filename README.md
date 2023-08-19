@@ -28,6 +28,12 @@
 ```
     #/home/john/Projects/dummy=0.12.0-dev.108+5395c2786
 ```
+### It also supports subdirectories, so if you have a project at `/home/john/Projects/dummy/dummy0`
+### and require version 0.11.0 you can add this to the config file:
+```
+    /home/john/Projects/dummy=0.11.0
+```
+
 ## Todos
 
 - [ ] Clean-Up Code
