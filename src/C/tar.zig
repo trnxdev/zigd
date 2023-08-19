@@ -24,9 +24,8 @@ pub fn extractTarXZ(archivePath: []const u8) !void {
     var file = try std.fs.openFileAbsolute(archivePath, .{});
     defer file.close();
 
-    if (Archive.archive_read_open_fd(a, file.handle, 10240) != Archive.ARCHIVE_OK) {
+    if (Archive.archive_read_open_fd(a, file.handle, 10240) != Archive.ARCHIVE_OK)
         return error.FailedToOpenArchive;
-    }
 
     while (Archive.archive_read_next_header(a, &entry) == Archive.ARCHIVE_OK) {
         _ = Archive.archive_read_extract(a, entry, Archive.ARCHIVE_EXTRACT_TIME | Archive.ARCHIVE_EXTRACT_PERM | Archive.ARCHIVE_EXTRACT_ACL | Archive.ARCHIVE_EXTRACT_FFLAGS);

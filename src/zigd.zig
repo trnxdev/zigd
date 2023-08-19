@@ -61,6 +61,9 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     defer allocator.free(fpstr);
 
     _ = try tarC.extractTarXZ(fpstr);
+    // use std.tar.pipeToFileSystem() in the future, currently very slow
+    // because it doesn't support GNU longnames or PAX headers.
+    // https://imgur.com/9ZUhkHx
 
     const fx = try std.fmt.allocPrint(allocator, "zig-" ++ url_platform ++ "-" ++ "{s}", .{version});
     defer allocator.free(fx);
@@ -71,8 +74,7 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     // zig-linux-x86_64-0.12.0-dev.126+387b0ac4f -> 0.12.0-dev.126+387b0ac4f
     try std.fs.cwd().rename(fx, lastp);
 
-    var _binpath = try std.fs.path.join(allocator, &.{ lastp, "zig" });
-    return _binpath;
+    return try std.fs.path.join(allocator, &.{ lastp, "zig" });
 }
 
 pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []const u8) !void {

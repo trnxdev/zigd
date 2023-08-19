@@ -67,6 +67,10 @@ pub fn main() !void {
             break :blk cfg.get(absolutecwd) orelse unreachable;
         }
 
+        if (try recursiveW(absolutecwd, &cfg)) |u| {
+            break :blk u;
+        }
+
         if (cfg.contains("default")) {
             break :blk cfg.get("default") orelse unreachable;
         }
@@ -113,4 +117,24 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !v
     var naargs = try nargs.toOwnedSlice();
     defer allocator.free(naargs);
     _ = try run(allocator, naargs);
+}
+
+// if user is in /home/john/dummy/x and there is a entry for /home/john/dummy/ in the config file,
+// then return the version for /home/john/dummy/
+fn recursiveW(absolute_: []const u8, cfg: *std.StringHashMap([]const u8)) !?[]const u8 {
+    var absolute = absolute_;
+    var cfg_ = cfg;
+
+    while (true) {
+        if (cfg_.contains(absolute)) {
+            return cfg_.get(absolute) orelse unreachable;
+        }
+
+        var last_slash = std.mem.lastIndexOf(u8, absolute, "/");
+
+        if (last_slash == null)
+            return null;
+
+        absolute = absolute[0..last_slash.?];
+    }
 }
