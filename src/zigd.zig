@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const run = @import("./utils.zig").run;
 const fromHome = @import("./utils.zig").fromHome;
 const tarC = @import("./C/tar.zig");
+const cfg = @import("./conf.zig");
 
 const arch = switch (builtin.cpu.arch) {
     .x86_64 => "x86_64",
@@ -78,4 +79,35 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
 
     const binpath = try _binpath.realpathAlloc(allocator, "zig");
     return binpath;
+}
+
+pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []const u8) !void {
+    var config = try cfg.load(allocator, home);
+    defer cfg.deinit(allocator, &config) catch {};
+
+    const d = try config.getOrPut("default");
+
+    if (!d.found_existing) {
+        d.key_ptr.* = try allocator.dupe(u8, "default");
+    } else {
+        allocator.free(d.value_ptr.*);
+    }
+
+    d.value_ptr.* = try allocator.dupe(u8, version);
+
+    var homedir = try std.fs.openDirAbsolute(home, .{});
+    defer homedir.close();
+
+    var zigdir = try homedir.openDir("zig", .{});
+    defer zigdir.close();
+
+    var z = zigdir.openDir(version, .{}) catch b: {
+        std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
+        const y = try install(allocator, version, home);
+        allocator.free(y);
+        break :b zigdir.openDir(version, .{}) catch unreachable;
+    };
+    z.close();
+
+    try cfg.save(home, config);
 }

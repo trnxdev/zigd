@@ -32,7 +32,7 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
         const fz = try findZigVersion(allocator) orelse @panic("Unable to find zig executable");
         const ck = try allocator.dupe(u8, "default");
         try cfgmap.put(ck, fz);
-        try save(home, &cfgmap);
+        try save(home, cfgmap);
     }
 
     return cfgmap;
@@ -49,22 +49,18 @@ pub fn deinit(allocator: std.mem.Allocator, cfgmap: *std.StringHashMap([]const u
     cfgmap.deinit();
 }
 
-pub fn save(home: []const u8, cfgmap: *std.StringHashMap([]const u8)) !void {
+pub fn save(home: []const u8, cfgmap: std.StringHashMap([]const u8)) !void {
     var homedir = try std.fs.openDirAbsolute(home, .{});
     defer homedir.close();
 
-    var file = homedir.openFile(".zigdconfig", .{}) catch blk: {
-        break :blk try homedir.createFile(".zigdconfig", .{});
-    };
-    var buffered = std.io.bufferedWriter(file.writer());
-
+    var buf: [4096]u8 = undefined;
     var it = cfgmap.iterator();
 
     while (it.next()) |p| {
-        try buffered.writer().print("{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
+        _ = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
     }
 
-    try buffered.flush();
+    try homedir.writeFile(".zigdconfig", &buf);
     return;
 }
 

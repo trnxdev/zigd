@@ -36,7 +36,7 @@
 - [x] Support for config (partially?)
 - [x] Implement own tar.xz extractor (needs fixing)
 - [ ] Add tests
-- [ ] Add d-set-default command
+- [x] Add d-set-default command
 - [ ] Add d-set-workspace command
 
 ## FAQ

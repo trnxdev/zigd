@@ -5,7 +5,7 @@ const config = @import("./conf.zig");
 const run = @import("./utils.zig").run;
 const fromHome = @import("./utils.zig").fromHome;
 
-const cmd = enum { install };
+const cmd = enum { install, @"set-default" };
 
 fn if_free(allocator: std.mem.Allocator, needtofree: bool, ptr: []const u8) void {
     if (needtofree) {
@@ -38,6 +38,15 @@ pub fn main() !void {
                 const d = try zigd.install(allocator, args[2], home);
                 allocator.free(d);
                 std.debug.print("Zigd has successfully installed zig version {s}!\n", .{args[2]});
+                return;
+            },
+            .@"set-default" => {
+                if (args.len < 3) {
+                    std.log.err("`zigd d-set-default` requires 1 argument (<Version>)", .{});
+                    return error.MissingArguments;
+                }
+                try zigd.setdefault(allocator, args[2], home);
+                std.debug.print("Zigd has successfully changed the default zig version {s}!\n", .{args[2]});
                 return;
             },
         }
