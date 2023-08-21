@@ -105,7 +105,7 @@ pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []con
         std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
         const y = try install(allocator, version, home);
         allocator.free(y);
-        break :b std.fs.openDirAbsolute(path, .{}) catch unreachable;
+        break :b try std.fs.openDirAbsolute(path, .{});
     };
     z.close();
 

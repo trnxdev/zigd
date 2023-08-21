@@ -49,3 +49,8 @@
 ### Why implement own tar.xz extractor?
 #### The one in std is very slow, and I couldn't find any other zig implementation of tar.xz extractor.
 #### Writing it in zig is also a bit hard so I used libarchive from C and made my own little wrapper for it.
+
+## Troubleshooting
+
+### My file gets wiped on save
+#### Set `zig.formattingProvider` to `zls`, should fix it.

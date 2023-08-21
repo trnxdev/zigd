@@ -20,7 +20,7 @@ pub fn main() !void {
 
     var env = try std.process.getEnvMap(allocator);
     defer env.deinit();
-    var home = env.get("HOME") orelse unreachable;
+    var home = env.get("HOME") orelse return error.NoEnv;
 
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
