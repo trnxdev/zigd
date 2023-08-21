@@ -81,7 +81,7 @@ pub fn main() !void {
     defer if_free(allocator, needtofree_, zig_version);
 
     const zig_binary = try try_get_bin: {
-        var zig_binary_0 = try std.fs.path.join(allocator, &.{home, ".zigd", "versions", zig_version});
+        var zig_binary_0 = try std.fs.path.join(allocator, &.{ home, ".zigd", "versions", zig_version });
         defer allocator.free(zig_binary_0);
         var zig_binary_1 = std.fs.openDirAbsolute(zig_binary_0, .{}) catch {
             std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
@@ -103,14 +103,7 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !v
     defer nargs.deinit();
     try nargs.append(zig_binary);
 
-    var i: usize = 0;
-
-    for (args) |arg| {
-        i += 1;
-
-        if (i == 1)
-            continue;
-
+    for (args[1..]) |arg| {
         try nargs.append(arg);
     }
 
