@@ -81,15 +81,15 @@ pub fn main() !void {
     defer if_free(allocator, needtofree_, zig_version);
 
     const zig_binary = try try_get_bin: {
-        var zig_binary_0 = try fromHome(home, "zig");
-        var zig_binary_1 = zig_binary_0.openDir(zig_version, .{}) catch {
+        var zig_binary_0 = try std.fs.path.join(allocator, &.{home, ".zigd", "versions", zig_version});
+        defer allocator.free(zig_binary_0);
+        var zig_binary_1 = std.fs.openDirAbsolute(zig_binary_0, .{}) catch {
             std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
             const bin = try zigd.install(allocator, zig_version, home);
             break :try_get_bin bin;
         };
         var zig_binary_a = zig_binary_1.realpathAlloc(allocator, "zig");
         zig_binary_1.close();
-        zig_binary_0.close();
         break :try_get_bin zig_binary_a;
     };
 

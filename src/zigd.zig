@@ -50,7 +50,7 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     const data = try req.reader().readAllAlloc(allocator, 2 << 50);
     defer allocator.free(data);
 
-    const friendlyname = try std.mem.concat(allocator, u8, &.{ "zigd-", os, "-", arch, "-", version, ".", archive_ext });
+    const friendlyname = try std.mem.concat(allocator, u8, &.{ "zigd-", os, url_platform, version, ".", archive_ext });
     defer allocator.free(friendlyname);
 
     var downloaddir = try fromHome(home, "Downloads");
@@ -65,13 +65,21 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     // because it doesn't support GNU longnames or PAX headers.
     // https://imgur.com/9ZUhkHx
 
-    const fx = try std.fmt.allocPrint(allocator, "zig-" ++ url_platform ++ "-" ++ "{s}", .{version});
+    const fx = try std.fmt.allocPrint(allocator, "zig-{s}-{s}", .{ url_platform, version });
     defer allocator.free(fx);
 
-    const lastp = try std.fs.path.join(allocator, &.{ home, "zig", version });
+    const _zigdver = try std.fs.path.join(allocator, &.{ home, ".zigd", "versions" });
+    defer allocator.free(_zigdver);
+
+    const lastp = try std.fs.path.join(allocator, &.{ _zigdver, version });
     defer allocator.free(lastp);
 
-    // zig-linux-x86_64-0.12.0-dev.126+387b0ac4f -> 0.12.0-dev.126+387b0ac4f
+    // create .zigd/versions if it doesn't exist
+    std.fs.makeDirAbsolute(_zigdver) catch {};
+
+    // libarchive can't set dest path so it extracts to cwd
+    // rename here moves the extracted folder to the correct path
+    // (cwd)/zig-linux-x86_64-0.11.0 -> ~/.zigd/versions/0.11.0
     try std.fs.cwd().rename(fx, lastp);
 
     return try std.fs.path.join(allocator, &.{ lastp, "zig" });
@@ -83,25 +91,21 @@ pub fn setdefault(allocator: std.mem.Allocator, version: []const u8, home: []con
 
     const d = try config.getOrPut("default");
 
-    if (!d.found_existing) {
-        d.key_ptr.* = try allocator.dupe(u8, "default");
-    } else {
+    if (!d.found_existing)
+        d.key_ptr.* = try allocator.dupe(u8, "default")
+    else
         allocator.free(d.value_ptr.*);
-    }
 
     d.value_ptr.* = try allocator.dupe(u8, version);
 
-    const path = try std.fs.path.join(allocator, &.{ home, "zig" });
+    const path = try std.fs.path.join(allocator, &.{ home, ".zigd", "versions", version });
     defer allocator.free(path);
 
-    var zigdir = try std.fs.openDirAbsolute(path, .{});
-    defer zigdir.close();
-
-    var z = zigdir.openDir(version, .{}) catch b: {
+    var z = std.fs.openDirAbsolute(path, .{}) catch b: {
         std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
         const y = try install(allocator, version, home);
         allocator.free(y);
-        break :b zigdir.openDir(version, .{}) catch unreachable;
+        break :b std.fs.openDirAbsolute(path, .{}) catch unreachable;
     };
     z.close();
 

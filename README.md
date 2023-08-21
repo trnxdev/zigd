@@ -9,12 +9,11 @@
 
 ## Commands
 
-### d-install <Version>, installs the <Version> of zig into zigd's cache.
-
+### d-install <Version>, installs the <Version> of zig into zigd's cache (which is located at `~/.zigd/versions`).
 
 ## Config
 
-### Now zigd supports a config file, which is located at `~/.zigdconfig`
+### Now zigd supports a config file, which is located at `~/.zigd/config`
 ### The content can be like this:
 ```
     default=0.12.0-dev.108+5395c2786

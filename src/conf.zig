@@ -9,7 +9,10 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
 
     var existed = true;
 
-    var cfgfile = homedir.readFileAlloc(allocator, ".zigdconfig", 1 << 21) catch |err| blk: {
+    var z = try homedir.makeOpenPath(".zigd", .{});
+    z.close();
+
+    var cfgfile = homedir.readFileAlloc(allocator, ".zigd/config", 1 << 21) catch |err| blk: {
         switch (err) {
             error.FileNotFound => {
                 existed = false;
@@ -64,7 +67,7 @@ pub fn save(home: []const u8, cfgmap: std.StringHashMap([]const u8)) !void {
 
     var nbuf = buf[0..l];
 
-    try homedir.writeFile(".zigdconfig", nbuf);
+    try homedir.writeFile(".zigd/config", nbuf);
     return;
 }
 
