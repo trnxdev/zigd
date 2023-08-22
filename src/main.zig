@@ -95,10 +95,11 @@ pub fn main() !void {
 
     defer allocator.free(zig_binary);
 
-    try exec(allocator, zig_binary, args);
+    const term = try exec(allocator, zig_binary, args);
+    std.os.exit(term.Exited);
 }
 
-fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !void {
+fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !std.ChildProcess.Term {
     var nargs = std.ArrayList([]const u8).init(allocator);
     defer nargs.deinit();
     try nargs.append(zig_binary);
@@ -109,7 +110,7 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !v
 
     var naargs = try nargs.toOwnedSlice();
     defer allocator.free(naargs);
-    _ = try run(allocator, naargs);
+    return try run(allocator, naargs);
 }
 
 // if user is in /home/john/dummy/x and there is a entry for /home/john/dummy/ in the config file,
