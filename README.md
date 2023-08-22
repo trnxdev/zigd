@@ -53,4 +53,4 @@
 ## Troubleshooting
 
 ### My file gets wiped on save
-#### Set `zig.formattingProvider` to `zls`, should fix it.
+#### ~~Set `zig.formattingProvider` to `zls`, should fix it.~~ Fixed in [#1](https://github.com/TiranexDev/zigd/pull/1)
