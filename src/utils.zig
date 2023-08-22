@@ -1,9 +1,8 @@
 const std = @import("std");
 
-pub fn run(allocator: std.mem.Allocator, argv: []const []const u8) !void {
+pub fn run(allocator: std.mem.Allocator, argv: []const []const u8) !std.ChildProcess.Term {
     var proc = std.ChildProcess.init(argv, allocator);
-    try proc.spawn();
-    _ = try proc.wait();
+    return proc.spawnAndWait();
 }
 
 pub fn fromHome(home: []const u8, to: []const u8) !std.fs.Dir {
