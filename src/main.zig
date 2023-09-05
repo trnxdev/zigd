@@ -110,18 +110,15 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !s
 // then return the version for /home/john/dummy/
 fn recursiveW(absolute_: []const u8, cfg: *std.StringHashMap([]const u8)) !?[]const u8 {
     var absolute = absolute_;
-    var cfg_ = cfg;
 
     while (true) {
-        if (cfg_.contains(absolute)) {
-            return cfg_.get(absolute) orelse unreachable;
+        if (cfg.contains(absolute)) {
+            return cfg.get(absolute) orelse unreachable;
         }
 
-        var last_slash = std.mem.lastIndexOf(u8, absolute, "/");
-
-        if (last_slash == null)
+        if (std.mem.lastIndexOfScalar(u8, absolute, '/')) |l|
+            absolute = absolute[0..l]
+        else
             return null;
-
-        absolute = absolute[0..last_slash.?];
     }
 }
