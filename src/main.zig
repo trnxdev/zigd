@@ -108,13 +108,12 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !s
 
 // if user is in /home/john/dummy/x and there is a entry for /home/john/dummy/ in the config file,
 // then return the version for /home/john/dummy/
-fn recursiveW(absolute_: []const u8, cfg: *std.StringHashMap([]const u8)) !?[]const u8 {
-    var absolute = absolute_;
+fn recursiveW(starter: []const u8, cfg: *std.StringHashMap([]const u8)) !?[]const u8 {
+    var absolute = starter;
 
     while (true) {
-        if (cfg.contains(absolute)) {
-            return cfg.get(absolute) orelse unreachable;
-        }
+        if (cfg.get(absolute)) |a|
+            return a;
 
         if (std.mem.lastIndexOfScalar(u8, absolute, '/')) |l|
             absolute = absolute[0..l]
