@@ -37,7 +37,7 @@ pub fn install(allocator: std.mem.Allocator, version: []const u8, home: []const 
     var req = try client.request(.GET, uri, headers, .{});
     defer req.deinit();
 
-    try req.start();
+    try req.start(.{});
     try req.finish();
     try req.wait();
 

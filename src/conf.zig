@@ -27,12 +27,13 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
     }
 
     var cfgmap = std.StringHashMap([]const u8).init(allocator);
+    errdefer cfgmap.deinit();
 
     if (existed) {
         try parse(allocator, cfgfile, &cfgmap);
         defer allocator.free(cfgfile);
     } else {
-        const fz = try findZigVersion(allocator) orelse @panic("Unable to find a zig executable,\nif it's your first time installing zig, consider running `zigd d-install <version>`\nand setting `default=<version?` in `~/.zigd/config`");
+        const fz = try findZigVersion(allocator) orelse @panic("Unable to find a zig executable,\nif it's your first time installing zig, consider running `zigd d-install <version>`\nand setting `default=<version>` in `~/.zigd/config`");
         const ck = try allocator.dupe(u8, "default");
         try cfgmap.put(ck, fz);
         try save(home, cfgmap);
@@ -75,10 +76,10 @@ pub fn parse(allocator: std.mem.Allocator, file: []const u8, cfgmap: *std.String
     var lines = std.mem.tokenize(u8, file, &[_]u8{'\n'});
 
     while (lines.next()) |line| {
-        var indexofs = std.mem.indexOf(u8, line, "=") orelse continue;
+        var indexofeq = std.mem.indexOf(u8, line, "=") orelse continue;
 
-        var key = std.mem.trim(u8, line[0..indexofs], &std.ascii.whitespace);
-        var value = std.mem.trim(u8, line[indexofs + 1 ..], &std.ascii.whitespace);
+        var key = std.mem.trim(u8, line[0..indexofeq], &std.ascii.whitespace);
+        var value = std.mem.trim(u8, line[indexofeq + 1 ..], &std.ascii.whitespace);
 
         if (key[0] == '#') continue;
 
@@ -95,19 +96,26 @@ pub fn findZigVersion(allocator: std.mem.Allocator) !?[]const u8 {
     defer allocator.free(env_path);
 
     var it = std.mem.tokenize(u8, env_path, &[_]u8{std.fs.path.delimiter});
+
     while (it.next()) |path| {
-        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ path, "zig" });
+        const full_path = try std.fs.path.join(allocator, &.{ path, "zig" });
         defer allocator.free(full_path);
 
         if (!std.fs.path.isAbsolute(full_path)) continue;
 
         const file = std.fs.openFileAbsolute(full_path, .{}) catch continue;
         defer file.close();
+
         const stat = file.stat() catch continue;
-        if (stat.kind == .directory) continue;
+
+        if (stat.kind == .directory)
+            continue;
+
         const lastSlash = std.mem.lastIndexOfScalar(u8, path[0 .. path.len - 1], '/') orelse @panic("Unable to find slash");
         const version = path[lastSlash + 1 ..];
+
         return try allocator.dupe(u8, version);
     }
+
     return null;
 }
