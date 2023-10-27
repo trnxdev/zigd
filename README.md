@@ -43,6 +43,7 @@
 - [ ] Add tests
 - [x] Add d-set-default command
 - [ ] Add d-set-workspace command
+- [ ] Fetching "master" on each request? Doesn't sound good for perfomance, maybe check it daily?
 
 ## FAQ
 
