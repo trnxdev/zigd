@@ -50,7 +50,7 @@ pub fn main() !void {
 
     var needtofree_ = true;
 
-    const zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch blk: {
+    var zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch blk: {
         needtofree_ = false;
 
         var absolutecwd = try std.fs.cwd().realpathAlloc(allocator, ".");
@@ -70,6 +70,11 @@ pub fn main() !void {
 
         @panic("No default/workspace version set in config file, and no zigd.ver file found in current directory.");
     };
+
+    if (std.mem.eql(u8, zig_version, "master")) {
+        if (needtofree_) allocator.free(zig_version);
+        zig_version = try zigd.masterFromIndex(allocator);
+    }
 
     defer _ = if (needtofree_) allocator.free(zig_version);
 
