@@ -7,7 +7,7 @@ pub fn run(allocator: std.mem.Allocator, argv: []const []const u8) !std.ChildPro
 
 pub fn fromHome(home: []const u8, to: []const u8) !std.fs.Dir {
     var o1 = try std.fs.openDirAbsolute(home, .{});
-    var o2 = try o1.makeOpenPath(to, .{});
+    const o2 = try o1.makeOpenPath(to, .{});
     o1.close();
     return o2;
 }

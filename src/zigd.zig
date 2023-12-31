@@ -63,7 +63,7 @@ pub fn masterFromIndex(allocator: std.mem.Allocator) ![]const u8 {
 pub fn install(allocator: std.mem.Allocator, given_version: []const u8, home: []const u8) ![]const u8 {
     var free_s: bool = false;
 
-    var version = vl: {
+    const version = vl: {
         if (std.mem.eql(u8, given_version, "master")) {
             free_s = true;
             break :vl try masterFromIndex(allocator);

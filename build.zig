@@ -12,6 +12,11 @@ pub fn build(b: *std.Build) void {
     });
     exe.linkLibC();
     exe.linkSystemLibrary("archive"); // libarchive
+
+    if (optimize != .Debug) {
+        exe.strip = true;
+    }
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

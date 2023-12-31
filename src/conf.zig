@@ -12,7 +12,7 @@ pub fn load(allocator: std.mem.Allocator, home: []const u8) !std.StringHashMap([
     var z = try homedir.makeOpenPath(".zigd", .{});
     z.close();
 
-    var cfgfile = homedir.readFileAlloc(allocator, ".zigd/config", 1 << 21) catch |err| blk: {
+    const cfgfile = homedir.readFileAlloc(allocator, ".zigd/config", 1 << 21) catch |err| blk: {
         switch (err) {
             error.FileNotFound => {
                 existed = false;
@@ -62,11 +62,11 @@ pub fn save(home: []const u8, cfgmap: std.StringHashMap([]const u8)) !void {
     var l: usize = 0;
 
     while (it.next()) |p| {
-        var u = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
+        const u = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
         l += u.len;
     }
 
-    var nbuf = buf[0..l];
+    const nbuf = buf[0..l];
 
     try homedir.writeFile(".zigd/config", nbuf);
     return;
@@ -76,15 +76,15 @@ pub fn parse(allocator: std.mem.Allocator, file: []const u8, cfgmap: *std.String
     var lines = std.mem.tokenize(u8, file, &[_]u8{'\n'});
 
     while (lines.next()) |line| {
-        var indexofeq = std.mem.indexOf(u8, line, "=") orelse continue;
+        const indexofeq = std.mem.indexOf(u8, line, "=") orelse continue;
 
-        var key = std.mem.trim(u8, line[0..indexofeq], &std.ascii.whitespace);
-        var value = std.mem.trim(u8, line[indexofeq + 1 ..], &std.ascii.whitespace);
+        const key = std.mem.trim(u8, line[0..indexofeq], &std.ascii.whitespace);
+        const value = std.mem.trim(u8, line[indexofeq + 1 ..], &std.ascii.whitespace);
 
         if (key[0] == '#') continue;
 
-        var dupedkey = try allocator.dupe(u8, key);
-        var dupedvalue = try allocator.dupe(u8, value);
+        const dupedkey = try allocator.dupe(u8, key);
+        const dupedvalue = try allocator.dupe(u8, value);
 
         try cfgmap.put(dupedkey, dupedvalue);
     }

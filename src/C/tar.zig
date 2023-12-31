@@ -12,7 +12,7 @@ const Archive = @cImport({
 });
 
 pub fn extractTarXZ(archivePath: []const u8) !void {
-    var a = Archive.archive_read_new();
+    const a = Archive.archive_read_new();
     var entry: ?*Archive.struct_archive_entry = null;
 
     //defer _ = Archive.archive_read_close(a);

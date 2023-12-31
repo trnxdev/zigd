@@ -12,7 +12,7 @@ pub fn main() !void {
     defer _ = if (mode == .Debug) gpa.deinit();
     const allocator = if (mode == .Debug) gpa.allocator() else std.heap.c_allocator;
 
-    var home = try std.process.getEnvVarOwned(allocator, "HOME");
+    const home = try std.process.getEnvVarOwned(allocator, "HOME");
     defer allocator.free(home);
 
     const args = try std.process.argsAlloc(allocator);
@@ -53,7 +53,7 @@ pub fn main() !void {
     var zig_version = std.fs.cwd().readFileAlloc(allocator, "zigd.ver", 1 << 21) catch blk: {
         needtofree_ = false;
 
-        var absolutecwd = try std.fs.cwd().realpathAlloc(allocator, ".");
+        const absolutecwd = try std.fs.cwd().realpathAlloc(allocator, ".");
         defer allocator.free(absolutecwd);
 
         if (cfg.contains(absolutecwd)) {
@@ -79,14 +79,14 @@ pub fn main() !void {
     defer _ = if (needtofree_) allocator.free(zig_version);
 
     const zig_binary = try try_get_bin: {
-        var zig_binary_0 = try std.fs.path.join(allocator, &.{ home, ".zigd", "versions", zig_version });
+        const zig_binary_0 = try std.fs.path.join(allocator, &.{ home, ".zigd", "versions", zig_version });
         defer allocator.free(zig_binary_0);
         var zig_binary_1 = std.fs.openDirAbsolute(zig_binary_0, .{}) catch {
             std.debug.print("Did not find zig binary in zigd cache, installing...\n", .{});
             const bin = try zigd.install(allocator, zig_version, home);
             break :try_get_bin bin;
         };
-        var zig_binary_a = zig_binary_1.realpathAlloc(allocator, "zig");
+        const zig_binary_a = zig_binary_1.realpathAlloc(allocator, "zig");
         zig_binary_1.close();
         break :try_get_bin zig_binary_a;
     };
@@ -106,7 +106,7 @@ fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !s
         try nargs.append(arg);
     }
 
-    var naargs = try nargs.toOwnedSlice();
+    const naargs = try nargs.toOwnedSlice();
     defer allocator.free(naargs);
     return try run(allocator, naargs);
 }
