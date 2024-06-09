@@ -1,1 +1,0 @@
-# Please note that the development of this Project has been migrated to https://codeberg.org/tiramify/zigd and any pull requests here will be closed.
