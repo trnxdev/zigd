@@ -65,10 +65,10 @@ pub fn save(home: []const u8, cfgmap: std.StringHashMap([]const u8)) !void {
         const u = try std.fmt.bufPrint(&buf, "{s}={s}\n", .{ p.key_ptr.*, p.value_ptr.* });
         l += u.len;
     }
-
-    const nbuf = buf[0..l];
-
-    try homedir.writeFile(".zigd/config", nbuf);
+    try homedir.writeFile(.{
+        .data = buf[0..l],
+        .sub_path = ".zigd/config",
+    });
     return;
 }
 

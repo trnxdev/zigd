@@ -1,16 +1,16 @@
 const std = @import("std");
-const mode = @import("builtin").mode;
 const zigd = @import("./zigd.zig");
 const config = @import("./conf.zig");
 const run = @import("./utils.zig").run;
 const fromHome = @import("./utils.zig").fromHome;
 
 const cmd = enum { install, @"set-default" };
+const DebugMode = @import("builtin").mode == .Debug;
 
 pub fn main() !void {
-    var gpa = if (mode == .Debug) std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = if (mode == .Debug) gpa.deinit();
-    const allocator = if (mode == .Debug) gpa.allocator() else std.heap.c_allocator;
+    var gpa = if (DebugMode) std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = if (DebugMode) gpa.allocator() else std.heap.c_allocator;
+    defer _ = if (DebugMode) gpa.deinit();
 
     const home = try std.process.getEnvVarOwned(allocator, "HOME");
     defer allocator.free(home);
@@ -94,10 +94,10 @@ pub fn main() !void {
     defer allocator.free(zig_binary);
 
     const term = try exec(allocator, zig_binary, args);
-    std.os.exit(term.Exited);
+    std.posix.exit(term.Exited);
 }
 
-fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !std.ChildProcess.Term {
+fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8) !std.process.Child.Term {
     var nargs = std.ArrayList([]const u8).init(allocator);
     defer nargs.deinit();
     try nargs.append(zig_binary);

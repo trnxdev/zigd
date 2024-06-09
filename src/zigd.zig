@@ -28,25 +28,30 @@ pub fn masterFromIndex(allocator: std.mem.Allocator) ![]const u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var headers = std.http.Headers.init(allocator);
-    defer headers.deinit();
+    const uri = try std.Uri.parse(index_url);
+    var header_buffer: [4096]u8 = undefined;
 
-    try headers.append("Content-Type", "application/json");
-
-    var req = try client.fetch(allocator, .{
-        .method = .GET,
-        .headers = headers,
-        .location = .{
-            .url = index_url,
+    var req = try client.open(.GET, uri, .{
+        .server_header_buffer = &header_buffer,
+        .headers = .{
+            .content_type = .{ .override = "application/json" },
         },
     });
     defer req.deinit();
 
-    if (req.status.class() != .success or req.body == null) {
-        return error.ResponseWasNotOk;
-    }
+    try req.send();
+    try req.finish();
+    try req.wait();
 
-    const json = try std.json.parseFromSlice(std.json.Value, allocator, req.body.?, .{});
+    const resp = req.response;
+
+    if (resp.status != .ok)
+        return error.ResponseWasNotOk;
+
+    const body = try req.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(body);
+
+    const json = try std.json.parseFromSlice(std.json.Value, allocator, body, .{});
     defer json.deinit();
 
     const master = json.value.object.get("master") orelse return error.MasterNotFound;
@@ -71,7 +76,6 @@ pub fn install(allocator: std.mem.Allocator, given_version: []const u8, home: []
             break :vl given_version;
         }
     };
-
     defer if (free_s) allocator.free(version) else void{};
 
     const url = try std.fmt.allocPrint(allocator, "https://ziglang.org/builds/zig-{s}-{s}.{s}", .{ url_platform, version, archive_ext });
@@ -81,19 +85,19 @@ pub fn install(allocator: std.mem.Allocator, given_version: []const u8, home: []
     defer client.deinit();
 
     const uri = try std.Uri.parse(url);
+    var header_buffer: [4096]u8 = undefined;
+    var req = try client.open(.GET, uri, .{
+        .server_header_buffer = &header_buffer,
+    });
 
-    var headers = std.http.Headers.init(allocator);
-    defer headers.deinit();
-
-    var req = try client.open(.GET, uri, headers, .{});
     defer req.deinit();
 
-    try req.send(.{});
+    try req.send();
     try req.finish();
     try req.wait();
 
     if (req.response.status != .ok)
-        @panic("Response was not ok!");
+        return error.ResponseWasNotOk;
 
     const data = try req.reader().readAllAlloc(allocator, 2 << 50);
     defer allocator.free(data);
@@ -102,7 +106,10 @@ pub fn install(allocator: std.mem.Allocator, given_version: []const u8, home: []
     defer allocator.free(friendlyname);
 
     var downloaddir = try fromHome(home, "Downloads");
-    try downloaddir.writeFile(friendlyname, data);
+    try downloaddir.writeFile(.{
+        .data = data,
+        .sub_path = friendlyname,
+    });
     defer downloaddir.close();
 
     const fpstr = try downloaddir.realpathAlloc(allocator, friendlyname);
