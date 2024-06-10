@@ -1,5 +1,4 @@
 const std = @import("std");
-const tarC = @import("C/tar.zig");
 const utils = @import("utils.zig");
 
 /// Version cannot be master!
@@ -29,37 +28,13 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
 
     try utils.createDirectoryIfNotExist(final_destination);
 
-    const data = try req.reader().readAllAlloc(allocator, 2 << 50);
-    defer allocator.free(data);
+    var final_dest = try std.fs.openDirAbsolute(final_destination, .{});
+    defer final_dest.close();
 
-    const friendly_cwd_name_ext = try std.mem.concat(allocator, u8, &.{ "zig-", utils.os, "-", utils.cpu_arch, "-", version, ".", utils.archive_ext });
+    var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
+    defer xz_decompressor.deinit();
 
-    defer allocator.free(friendly_cwd_name_ext);
-
-    const tarfile = try std.fs.cwd().createFile(friendly_cwd_name_ext, .{
-        .truncate = true,
-        .exclusive = false,
-    });
-    defer tarfile.close();
-    try tarfile.writeAll(data);
-
-    // Use std.tar.pipeToFileSystem() in the future, currently very slow
-    // because it doesn't support GNU longnames or PAX headers.
-    // https://imgur.com/9ZUhkHx
-    _ = try tarC.extractTarXZ(friendly_cwd_name_ext);
-
-    const the_extracted_path = try std.fs.cwd().realpathAlloc(allocator, friendly_cwd_name_ext[0 .. friendly_cwd_name_ext.len - (".".len + utils.archive_ext.len)]);
-    defer allocator.free(the_extracted_path);
-
-    if (!(try utils.isDirectory(the_extracted_path))) {
-        return error.InstalledFileWasExtractedButLost___Oops;
-    }
-
-    // libarchive can't set dest path so it extracts to cwd
-    // rename here moves the extracted folder to the correct path
-    // (cwd)/zig-linux-x86_64-0.11.0 -> ~/.zigd/versions/0.11.0
-    try std.fs.cwd().rename(the_extracted_path, final_destination);
-    try std.fs.cwd().deleteFile(friendly_cwd_name_ext);
+    try std.tar.pipeToFileSystem(final_dest, xz_decompressor.reader(), .{ .strip_components = 1 });
     return;
 }
 

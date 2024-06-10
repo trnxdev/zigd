@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const tarC = @import("./C/tar.zig");
 
 pub const cpu_arch: []const u8 = switch (builtin.cpu.arch) {
     .x86, .powerpc64le, .x86_64, .aarch64, .riscv64 => |e| @tagName(e),

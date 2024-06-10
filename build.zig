@@ -12,9 +12,6 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(zigdcli);
 
-    zigdcli.linkLibC();
-    zigdcli.linkSystemLibrary("archive"); // libarchive
-
     const zigdemu = b.addExecutable(.{
         .name = "zigdemu",
         .root_source_file = b.path("src/zigdemu.zig"),
@@ -23,8 +20,10 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(zigdemu);
 
-    zigdemu.linkLibC();
-    zigdemu.linkSystemLibrary("archive"); // libarchive
+    if (optimize != .Debug) {
+        zigdcli.linkLibC();
+        zigdemu.linkLibC();
+    }
 
     const run_cmd = b.addRunArtifact(zigdemu);
     run_cmd.step.dependOn(b.getInstallStep());
