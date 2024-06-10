@@ -28,13 +28,42 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
 
     try utils.createDirectoryIfNotExist(final_destination);
 
-    var final_dest = try std.fs.openDirAbsolute(final_destination, .{});
-    defer final_dest.close();
+    if (utils.os_tag == .windows) {
+        // std.zip has no strip components :( so we have to do this mess...
+        // TODO: It's kinda slow but it's std.zip's fault... yea, maybe we can do something to speed it up.
+        const temp_name = "DO_NOT_MODIFY_U_STINKY-zigd-install-temp";
 
-    var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
-    defer xz_decompressor.deinit();
+        var temporary_storage = try std.fs.cwd().makeOpenPath(temp_name, .{
+            .iterate = true,
+        });
 
-    try std.tar.pipeToFileSystem(final_dest, xz_decompressor.reader(), .{ .strip_components = 1 });
+        const buf = try req.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+        defer allocator.free(buf);
+
+        var fbs = std.io.fixedBufferStream(buf);
+        try std.zip.extract(temporary_storage, fbs.seekableStream(), .{});
+
+        var tempstrg = temporary_storage.iterate();
+        const w_path = try tempstrg.next() orelse return error.ZigInstallationWasLost__Oops;
+
+        const w_path_duped = try allocator.dupe(u8, w_path.name);
+        defer allocator.free(w_path_duped);
+
+        if ((try tempstrg.next()) != null)    
+            return error.InstallationWasSabotaged;
+
+        try temporary_storage.rename(w_path_duped, final_destination);
+        temporary_storage.close();
+        try std.fs.cwd().deleteDir(temp_name);
+    } else {    
+        var final_dest_dir = try std.fs.openDirAbsolute(final_destination, .{});
+        defer final_dest_dir.close();
+
+        var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
+        defer xz_decompressor.deinit();
+    
+        try std.tar.pipeToFileSystem(final_dest_dir, xz_decompressor.reader(), .{ .strip_components = 1 });
+    }
     return;
 }
 
@@ -150,8 +179,15 @@ pub fn getZigdPath(allocator: std.mem.Allocator) ![]u8 {
 
     var custom_zigd: bool = true;
     const zigd_directory = env_map.get(utils.custom_env_path_key_for_zigd) orelse v: {
+        custom_zigd = false;
+
+        if (utils.os_tag == .windows) {
+            if (env_map.get("USERPROFILE")) |userprofile| {
+                break :v try std.fs.path.join(allocator, &.{ userprofile, ".zigd" });
+            }
+        }
+        
         if (env_map.get("HOME")) |home| {
-            custom_zigd = false;
             break :v try std.fs.path.join(allocator, &.{ home, ".zigd" });
         }
 

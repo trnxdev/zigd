@@ -2,7 +2,6 @@ const std = @import("std");
 const zigdcore = @import("zigdcore.zig");
 const utils = @import("utils.zig");
 
-const stdout = std.io.getStdOut().writer();
 const Command = enum {
     help,
     install,
@@ -37,7 +36,7 @@ pub fn main() !void {
 }
 
 fn help_menu() !void {
-    try stdout.print(
+    try std.io.getStdOut().writer().print(
         \\> zigd ({s}) cli: Manage zigd stuff
         \\ 
         \\help - Outputs this help Menu
@@ -50,7 +49,7 @@ fn help_menu() !void {
 }
 
 fn version() !void {
-    try stdout.print("{s}\n", .{utils.zigd_version});
+    try std.io.getStdOut().writer().print("{s}\n", .{utils.zigd_version});
     return;
 }
 
@@ -59,7 +58,7 @@ var user_arg: zigdcore.ZigVersion.Source = .UserArg;
 fn install(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len <= 2) {
         std.log.err("Wrong Usage!\n", .{});
-        try stdout.print(
+        try std.io.getStdOut().writer().print(
             \\Usage: zigd install [version]
             \\For more help use zigd help
             \\
@@ -70,7 +69,7 @@ fn install(allocator: std.mem.Allocator, args: []const []const u8) !void {
     var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
     defer zig_version.deinitIfMasterOrZigver(allocator);
 
-    try stdout.print("Installing zig version {s}\n", .{zig_version});
+    try std.io.getStdOut().writer().print("Installing zig version {s}\n", .{zig_version});
 
     const download_url = try zigdcore.downloadUrlFromVersion(allocator, zig_version.as_string, zig_version.source == .Master);
     defer allocator.free(download_url);
@@ -84,7 +83,7 @@ fn install(allocator: std.mem.Allocator, args: []const []const u8) !void {
 fn exists(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len <= 2) {
         std.log.err("Wrong Usage!\n", .{});
-        try stdout.print(
+        try std.io.getStdOut().writer().print(
             \\Usage: zigd exists [version]
             \\For more help use zigd help
             \\
@@ -102,8 +101,8 @@ fn exists(allocator: std.mem.Allocator, args: []const []const u8) !void {
     defer allocator.free(version_path);
 
     if (try utils.isDirectory(version_path)) {
-        try stdout.writeAll("Yes!\n");
+        try std.io.getStdOut().writer().writeAll("Yes!\n");
     } else {
-        try stdout.writeAll("No!\n");
+        try std.io.getStdOut().writer().writeAll("No!\n");
     }
 }

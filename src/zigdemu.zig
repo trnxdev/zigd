@@ -56,7 +56,7 @@ pub fn main() !void {
     zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true);
     defer zig_version.deinitIfMasterOrZigver(allocator);
 
-    const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" });
+    const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" ++ utils.binary_ext });
     defer allocator.free(zig_binary_path);
 
     if (!(try utils.isFile(zig_binary_path))) o: {

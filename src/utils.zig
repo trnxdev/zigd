@@ -5,17 +5,19 @@ pub const cpu_arch: []const u8 = switch (builtin.cpu.arch) {
     .x86, .powerpc64le, .x86_64, .aarch64, .riscv64 => |e| @tagName(e),
     else => @compileError("Unsupported CPU Architecture"),
 };
-pub const os: []const u8 = switch (builtin.os.tag) {
-    .linux, .macos => |e| @tagName(e),
-    else => @compileError("Unsupported OS"), // Windows too
+pub const os: []const u8 = switch (os_tag) {
+    .windows, .linux, .macos => |e| @tagName(e),
+    else => @compileError("Unsupported OS, if you think your OS supported file an issue on github."),
 };
+pub const os_tag = builtin.os.tag;
 pub const url_platform = os ++ "-" ++ cpu_arch;
-pub const archive_ext = if (builtin.os.tag == .windows) "zip" else "tar.xz"; // Maybe Windows support in future?
+pub const archive_ext = if (os_tag == .windows) "zip" else "tar.xz"; // Maybe Windows support in future?
 pub const index_url: []const u8 = "https://ziglang.org/download/index.json";
 pub const download_base_url: []const u8 = "https://ziglang.org/download";
 pub const download_base_master_url: []const u8 = "https://ziglang.org/builds"; // Master builds have another url for some unknown reason
 pub const zigd_version = @embedFile("zigd.version");
 pub const custom_env_path_key_for_zigd = "ZIGD_DIRECTORY";
+pub const binary_ext = if (os_tag == .windows) ".exe" else "";
 pub const InDebug = builtin.mode == .Debug;
 
 // == File System Stuff
