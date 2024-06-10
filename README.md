@@ -44,8 +44,10 @@
 ```
 default=0.13.0
 # My company still uses the old Zig Version >:(
-/home/john/work/some_project=0.10.0
+/home/john/work/some_project=0.5.0
 ```
+
+### Fun fact, if you are in `/home/john/work/some_project/some_deeper_project`, it will still return 0.5.0, because zigd searches for paths recursively! :O 
 
 ## An Example Usage
 
