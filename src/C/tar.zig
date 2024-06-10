@@ -11,20 +11,22 @@ const Archive = @cImport({
     @cInclude("sys/wait.h");
 });
 
-pub fn extractTarXZ(archivePath: []const u8) !void {
+pub fn extractTarXZ(path: []const u8) !void {
     const a = Archive.archive_read_new();
     var entry: ?*Archive.struct_archive_entry = null;
 
-    //defer _ = Archive.archive_read_close(a);
     defer _ = Archive.archive_read_free(a);
 
     _ = Archive.archive_read_support_filter_xz(a);
     _ = Archive.archive_read_support_format_tar(a);
 
-    var file = try std.fs.openFileAbsolute(archivePath, .{});
+    // For some reason we have to reopen the file, so we cannot share the handle from zigdcore.install_zig()
+    const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    if (Archive.archive_read_open_fd(a, file.handle, 10240) != Archive.ARCHIVE_OK)
+    const res = Archive.archive_read_open_fd(a, file.handle, 10240);
+
+    if (res != Archive.ARCHIVE_OK)
         return error.FailedToOpenArchive;
 
     while (Archive.archive_read_next_header(a, &entry) == Archive.ARCHIVE_OK) {

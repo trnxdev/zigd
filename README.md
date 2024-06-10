@@ -1,57 +1,91 @@
-# zigd :D ~ Stop switching zig versions by yourself
+# zigd :D ~ Manage your zigd versions on ease!
 
-## Showcase: https://youtu.be/xDC6NZGONc4
+## Usage: 
+### There are 2 executables, `zigdemu` and `zigd`
 
-## Usage
+## zigd
 
-### Just reaplace zig with zigd, `zig build` => `zigd build`
-### Make sure to have zigd.ver file, with the version you need like: `0.12.0-dev.108+5395c2786`
+### zigd is an executable to manage versions or other zigd related stuff, by the default zigd files are managed in $HOME/.zigd, you can replace that with the `ZIGD_DIRECTORY` environment variable.
 
-## Commands
+### Commands:
 
-### d-install <Version>, installs the <Version> of zig into zigd's cache (which is located at `~/.zigd/versions`).
+| Command           | What does it do?                                  |
+| :---------------: | :-----------------------------------------------: |
+| help              | Help screen                                       |
+| version           | Outputs zigd version                              |
+| install [version] | Installs a zig version                            |
+| exists  [version] | Check if a zig version is installed on the system |
+ 
+## zigdemu
 
-## Config
+### zigdemu is an executable to "emulate" the zig executable, what it really does it just finds the correct zig version installed with zigd and executes it.
+### So just replace zig with zigdemu, `zig build` => `zigdemu build`
 
-### Now zigd supports a config file, which is located at `~/.zigd/config`
-### The content can be like this:
+### How the zigdemu executable finds the correct version:
+##### sorted by Precedence
+
+- zig.ver: A file that contains the zig version, nothing more.
+- (zigd directory)/config
+
+### In the config there is also an order
+
+- (path): A version for a specific path, it is search recursively (so if you set /x=0.11.0, /x/d will also use 0.11.0)
+- default: It is used as a last resort, pretty much self explainable
+
+## Config Syntax
+
+### As mentioned previously the config file is located at (zigd directory)/config
+
+### You can use # at the start for comments (Works only if it's at the start, won't be checked if it has even one space before)
+
+### And the syntax is just ``k=v``, where k is default or a path and v is a zig version, here is an example:
+
+<sub>~/.zigd/config</sub>
 ```
-    default=0.12.0-dev.108+5395c2786
-```
-### This will set the default version to 0.12.0-dev.108+5395c2786, so if zigd.ver is not found, it will use this version.
-### You can also set the default version of workspace, by adding this
-```
-    /home/john/Projects/dummy=0.12.0-dev.108+5395c2786
-```
-### Comments can be added by adding a `#` at the start of the line.
-```
-    #/home/john/Projects/dummy=0.12.0-dev.108+5395c2786
-```
-### It also supports subdirectories, so if you have a project at `/home/john/Projects/dummy/dummy0`
-### and require version 0.11.0 you can add this to the config file:
-```
-    /home/john/Projects/dummy=0.11.0
+default=0.13.0
+# My company still uses the old Zig Version >:(
+/home/john/work/some_project=0.10.0
 ```
 
-## Todos
+## An Example Usage
 
-- [ ] Clean-Up Code
-- [x] Auto-Install Zig
-- [ ] Support for VSCode zls plugin
-- [x] Support for config (partially?)
-- [x] Implement own tar.xz extractor (needs fixing)
-- [ ] Add tests
-- [x] Add d-set-default command
-- [ ] Add d-set-workspace command
-- [ ] Fetching "master" on each request? Doesn't sound good for perfomance, maybe check it daily?
-
-## FAQ
-
-### Why implement own tar.xz extractor?
-#### The one in std is very slow, and I couldn't find any other zig implementation of tar.xz extractor.
-#### Writing it in zig is also a bit hard so I used libarchive from C and made my own little wrapper for it.
-
-## Troubleshooting
-
-### My file gets wiped on save
-#### ~~Set `zig.formattingProvider` to `zls`, should fix it.~~ Fixed in [#1](https://github.com/TiranexDev/zigd/pull/1)
+```
+[john@coolpc test]$ cat ~/.zigd/config 
+default=0.12.0
+[john@coolpc test]$ zigdemu version
+warning: Zigd could not find zig version "0.12.0" on your system, installing...
+0.12.0
+[john@coolpc test]$ # Change the Version (in any editor of your choice)
+[john@coolpc test]$ cat ~/.zigd/config 
+default=0.13.0
+[john@coolpc test]$ zigdemu version
+warning: Zigd could not find zig version "0.13.0" on your system, installing...
+0.13.0
+[john@coolpc test]$ # Create a zig.ver file with a version you need
+[john@coolpc test]$ cat zig.ver
+0.12.0
+[john@coolpc test]$ zigdemu version
+0.12.0
+[john@coolpc test]$ # Use zigd utility for more stuff!
+[john@coolpc test]$ zigd exists 0.12.0
+Yes!
+[john@coolpc test]$ zigd exists 0.11.0
+No!
+[john@coolpc test]$ zigd install 0.11.0
+Installing zig version "0.11.0"
+[john@coolpc test]$ zigd exists 0.11.0
+Yes!
+[john@coolpc test]$ # Change the zig.ver file again...
+[john@coolpc test]$ cat zig.ver
+0.11.0
+[john@coolpc test]$ zigdemu version
+0.11.0
+[john@coolpc test]$ # Change the version to be master in zig.ver
+[john@coolpc test]$ cat zig.ver
+master
+[trnx@trnxbox zigd]$ zigdemu version
+warning: Zigd could not find zig version "master" (0.14.0-dev.14+ec337051a) on your system, installing...
+0.14.0-dev.14+ec337051a
+[trnx@trnxbox zigd]$ # Wow! This is epic!
+```
+<sub>0.14.0-dev.14+ec337051a is the master as of making the README</sub>

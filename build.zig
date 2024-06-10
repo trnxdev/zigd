@@ -4,18 +4,29 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
+    const zigdcli = b.addExecutable(.{
         .name = "zigd",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/zigdcli.zig"),
         .target = target,
         .optimize = optimize,
     });
-    b.installArtifact(exe);
+    b.installArtifact(zigdcli);
 
-    exe.linkLibC();
-    exe.linkSystemLibrary("archive"); // libarchive
- 
-    const run_cmd = b.addRunArtifact(exe);
+    zigdcli.linkLibC();
+    zigdcli.linkSystemLibrary("archive"); // libarchive
+
+    const zigdemu = b.addExecutable(.{
+        .name = "zigdemu",
+        .root_source_file = b.path("src/zigdemu.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(zigdemu);
+
+    zigdemu.linkLibC();
+    zigdemu.linkSystemLibrary("archive"); // libarchive
+
+    const run_cmd = b.addRunArtifact(zigdemu);
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
