@@ -3,14 +3,14 @@ const utils = @import("utils.zig");
 
 /// Version cannot be master!
 /// Returns a bool if it installed/reinstalled zig
-pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, install_path: []const u8, zig_version: ZigVersion) !bool {
-    const final_destination = try std.fs.path.join(allocator, &.{ install_path, "versions", zig_version.as_string });
+pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download_url: []const u8, zig_version: ZigVersion) !bool {
+    const final_destination = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string });
     defer allocator.free(final_destination);
 
     if (try utils.isDirectory(final_destination)) {
         o: while (true) {
-            const byte = try std.io.getStdIn().reader().readByte();
             std.log.warn("Version {} is already installed on your system! Re-install? (y/n)", .{zig_version});
+            const byte = try std.io.getStdIn().reader().readByte();
 
             switch (byte) {
                 'y' => {
@@ -42,17 +42,26 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
     if (req.response.status != .ok)
         return error.ResponseWasNotOk;
 
-    try utils.createDirectoryIgnoreExist(final_destination);
+    const temp_dir_path = try std.fs.path.join(allocator, &.{ zigd_path, "tmp" });
+    defer allocator.free(temp_dir_path);
+
+    try utils.createDirectoryIgnoreExist(temp_dir_path);
+
+    var temp_dir = try std.fs.openDirAbsolute(temp_dir_path, .{});
+    defer temp_dir.close();
+
+    const temp_name = try std.fmt.allocPrint(allocator, "DO_NOT_MODIFY_zigd-{d}", .{std.time.nanoTimestamp()});
+    defer allocator.free(temp_name);
+
+    var temp_storage_closed: bool = false;
+    var temporary_storage = try temp_dir.makeOpenPath(temp_name, .{
+        .iterate = true,
+    });
+    errdefer if (!temp_storage_closed) temporary_storage.close();
 
     if (utils.os_tag == .windows) {
         // std.zip has no strip components :( so we have to do this mess...
         // TODO: It's kinda slow but it's std.zip's fault... yea, maybe we can do something to speed it up.
-        const temp_name = "DO_NOT_MODIFY_U_STINKY-zigd-install-temp";
-
-        var temporary_storage = try std.fs.cwd().makeOpenPath(temp_name, .{
-            .iterate = true,
-        });
-
         const buf = try req.reader().readAllAlloc(allocator, std.math.maxInt(usize));
         defer allocator.free(buf);
 
@@ -70,15 +79,17 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
 
         try temporary_storage.rename(w_path_duped, final_destination);
         temporary_storage.close();
+        temp_storage_closed = true;
         try std.fs.cwd().deleteDir(temp_name);
     } else {
-        var final_dest_dir = try std.fs.openDirAbsolute(final_destination, .{});
-        defer final_dest_dir.close();
-
         var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
         defer xz_decompressor.deinit();
 
-        try std.tar.pipeToFileSystem(final_dest_dir, xz_decompressor.reader(), .{ .strip_components = 1 });
+        try std.tar.pipeToFileSystem(temporary_storage, xz_decompressor.reader(), .{ .strip_components = 1 });
+        try utils.createDirectoryIfNotExist(final_destination);
+        temporary_storage.close();
+        temp_storage_closed = true;
+        try temp_dir.rename(temp_name, final_destination);
     }
 
     return true;
@@ -264,4 +275,18 @@ pub fn getZigdPath(allocator: std.mem.Allocator) ![]u8 {
     }
 
     return try allocator.dupe(u8, zigd_directory);
+}
+
+// I'm bored, that's why im gonna do it the messy style
+pub fn garbage_collect_tempdir(zigd_path: []const u8) !void {
+    var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    var idx: usize = 0;
+    @memcpy(buf[0 .. idx + zigd_path.len], zigd_path);
+    idx += zigd_path.len;
+    buf[idx] = std.fs.path.sep;
+    idx += 1;
+    @memcpy(buf[idx .. idx + "tmp".len], "tmp");
+    idx += "tmp".len;
+
+    try std.fs.deleteTreeAbsolute(buf[0..idx]);
 }
