@@ -204,7 +204,7 @@ pub const ZigVersion = struct {
 
     pub const Source = union(enum) {
         UserArg, // Zigd Cli exclusive
-        Zigver, // zig.ver file
+        DotZigversion, // .zigversion file
         Zonver, // build.zig.zon, minimum_zig_version field
         WorkspaceVer, // config, path
         DefaultVer, // config, default
@@ -219,7 +219,7 @@ pub const ZigVersion = struct {
         };
 
         if (std.mem.eql(u8, zig_version.as_string, "master")) {
-            if (free_instant_if_zigver and source.* == .Zigver)
+            if (free_instant_if_zigver and source.* == .DotZigversion)
                 allocator.free(str);
 
             zig_version = .{
@@ -248,9 +248,9 @@ pub const ZigVersion = struct {
         }
     }
 
-    pub fn deinitIfMasterOrZigverOrZonver(self: @This(), allocator: std.mem.Allocator) void {
+    pub fn deinitIfMightBeAllocated(self: @This(), allocator: std.mem.Allocator) void {
         switch (self.source) {
-            .Master, .Zigver, .Zonver => allocator.free(self.as_string),
+            .Master, .DotZigversion, .Zonver => allocator.free(self.as_string),
             else => {},
         }
     }

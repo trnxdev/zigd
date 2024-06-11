@@ -1,6 +1,6 @@
 .{
     .name = "zigd",
-    .version = "0.0.5",
+    .version = "0.0.6",
     .minimum_zig_version = "0.13.0",
     .paths = .{
         "build.zig",

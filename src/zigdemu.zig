@@ -24,11 +24,11 @@ pub fn main() !void {
     defer config.deinit();
 
     var zig_version: zigdcore.ZigVersion = v: {
-        if (try utils.existsReadFile(allocator, "zig.ver")) |zig_ver| {
+        if (try utils.existsReadFile(allocator, ".zigversion")) |zig_ver| {
             // Can't error so no need for errdefer in this scope
             break :v zigdcore.ZigVersion{
                 .as_string = zig_ver,
-                .source = .Zigver,
+                .source = .DotZigversion,
             };
         }
 
@@ -60,12 +60,12 @@ pub fn main() !void {
             };
         }
 
-        std.log.err("No default, workspace, or zig.ver version was found.", .{});
+        std.log.err("No default, workspace, or .zigversion version was found.", .{});
         return;
     };
 
     zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true, zigd_path, true);
-    defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
+    defer zig_version.deinitIfMightBeAllocated(allocator);
 
     const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" ++ utils.binary_ext });
     defer allocator.free(zig_binary_path);

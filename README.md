@@ -26,7 +26,7 @@
 ### How the zigdemu executable finds the correct version:
 ##### sorted by Precedence
 
-- zig.ver: A file that contains the zig version, nothing more.
+- .zigversion: A file that contains the zig version, nothing more.
 - build.zig.zon: More specifically the minimum_zig_version option
 - (zigd directory)/config
 
@@ -79,8 +79,8 @@ default=0.13.0
 [john@coolpc test]$ zigdemu version
 warning: Zigd could not find zig version "0.13.0" on your system, installing...
 0.13.0
-[john@coolpc test]$ # Create a zig.ver file with a version you need
-[john@coolpc test]$ cat zig.ver
+[john@coolpc test]$ # Create a .zigversion file with a version you need
+[john@coolpc test]$ cat .zigversion
 0.12.0
 [john@coolpc test]$ zigdemu version
 0.12.0
@@ -93,13 +93,13 @@ No!
 Installing zig version "0.11.0"
 [john@coolpc test]$ zigd exists 0.11.0
 Yes!
-[john@coolpc test]$ # Change the zig.ver file again...
-[john@coolpc test]$ cat zig.ver
+[john@coolpc test]$ # Change the .zigversion file again...
+[john@coolpc test]$ cat .zigversion
 0.11.0
 [john@coolpc test]$ zigdemu version
 0.11.0
-[john@coolpc test]$ # Change the version to be master in zig.ver
-[john@coolpc test]$ cat zig.ver
+[john@coolpc test]$ # Change the version to be master in .zigversion
+[john@coolpc test]$ cat .zigversion
 master
 [trnx@trnxbox zigd]$ zigdemu version
 warning: Zigd could not find zig version "master" (0.14.0-dev.14+ec337051a) on your system, installing...
