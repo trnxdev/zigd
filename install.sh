@@ -1,13 +1,12 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
-if [ $(which wget) == '' ]; then
+if ! [ -x "$(command -v wget)" ]; then
     echo 'wget is required to install zigd'
     exit 1
 fi
 
 # Setup
-mkdir $HOME/.zigd
-mkdir $HOME/.zigd/bin
+mkdir -p $HOME/.zigd/bin
 
 # Zigd
 wget https://github.com/trnxdev/zigd/releases/latest/download/zigd -O $HOME/.zigd/bin/zigd
