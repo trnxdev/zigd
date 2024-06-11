@@ -22,39 +22,48 @@ pub fn main() !void {
     defer config.deinit();
 
     var zig_version: zigdcore.ZigVersion = v: {
-        const zig_ver = std.fs.cwd().readFileAlloc(allocator, "zig.ver", 1 << 21) catch |e| switch (e) {
-            std.fs.File.OpenError.FileNotFound => {
-                const absolute_cwd = try std.fs.cwd().realpathAlloc(allocator, ".");
-                defer allocator.free(absolute_cwd);
+        if (try utils.existsReadFileCwd(allocator, "zig.ver")) |zig_ver| {
+            // Can't error so no need for errdefer in this scope
+            break :v zigdcore.ZigVersion{
+                .as_string = zig_ver,
+                .source = .Zigver,
+            };
+        }
 
-                if (config.recursive_search_for_workspace_version(absolute_cwd)) |workspace_version| {
-                    break :v zigdcore.ZigVersion{
-                        .as_string = workspace_version,
-                        .source = .WorkspaceVer,
-                    };
-                }
+        if (try utils.existsReadFileCwdSentinel(allocator, "build.zig.zon")) |build_zig_zon| {
+            defer allocator.free(build_zig_zon);
 
-                if (config.default) |default_version| {
-                    break :v zigdcore.ZigVersion{
-                        .as_string = default_version,
-                        .source = .DefaultVer,
-                    };
-                }
+            if (try zon_minimum_version(allocator, build_zig_zon)) |zonver| {
+                break :v zigdcore.ZigVersion{
+                    .as_string = zonver,
+                    .source = .Zonver,
+                };
+            }
+        }
 
-                std.log.err("No default, workspace, or zig.ver version was found.", .{});
-                return;
-            },
-            else => return e,
-        };
+        const absolute_cwd = try std.fs.cwd().realpathAlloc(allocator, ".");
+        defer allocator.free(absolute_cwd);
 
-        break :v zigdcore.ZigVersion{
-            .as_string = zig_ver,
-            .source = .Zigver,
-        };
+        if (config.recursive_search_for_workspace_version(absolute_cwd)) |workspace_version| {
+            break :v zigdcore.ZigVersion{
+                .as_string = workspace_version,
+                .source = .WorkspaceVer,
+            };
+        }
+
+        if (config.default) |default_version| {
+            break :v zigdcore.ZigVersion{
+                .as_string = default_version,
+                .source = .DefaultVer,
+            };
+        }
+
+        std.log.err("No default, workspace, or zig.ver version was found.", .{});
+        return;
     };
 
     zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true);
-    defer zig_version.deinitIfMasterOrZigver(allocator);
+    defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" ++ utils.binary_ext });
     defer allocator.free(zig_binary_path);
@@ -176,3 +185,56 @@ const Config = struct {
         self.allocator.free(self.contents);
     }
 };
+
+// Caller frees the returned memory
+fn zon_minimum_version(allocator: std.mem.Allocator, zon_contents: [:0]u8) !?[]const u8 {
+    var ast = try std.zig.Ast.parse(allocator, zon_contents, .zon);
+    defer ast.deinit(allocator);
+
+    var ast_buf: [2]std.zig.Ast.Node.Index = undefined;
+    const root = ast.fullStructInit(&ast_buf, ast.nodes.items(.data)[0].lhs) orelse return error.ZonParseError;
+
+    for (root.ast.fields) |field_idx| {
+        const field_name = try parseFieldName(allocator, ast, field_idx);
+        defer allocator.free(field_name);
+
+        if (std.mem.eql(u8, field_name, "minimum_zig_version")) {
+            return try parseString(allocator, ast, field_idx);
+        }
+    }
+
+    return null;
+}
+
+// Caller frees memory
+fn parseString(allocator: std.mem.Allocator, ast: std.zig.Ast, idx: std.zig.Ast.Node.Index) ![]const u8 {
+    const node_tags = ast.nodes.items(.tag);
+    const main_tokens = ast.nodes.items(.main_token);
+    if (node_tags[idx] != .string_literal) {
+        return error.ExpectedStringLiteral;
+    }
+    const str_lit_token = main_tokens[idx];
+    const token_bytes = ast.tokenSlice(str_lit_token);
+    return try parseStrLit(allocator, token_bytes, 0);
+}
+
+// Caller frees memory
+inline fn parseStrLit(
+    allocator: std.mem.Allocator,
+    bytes: []const u8,
+    offset: u32,
+) ![]u8 {
+    return try std.zig.string_literal.parseAlloc(allocator, bytes[offset..]);
+}
+
+fn parseFieldName(
+    alloc: std.mem.Allocator,
+    ast: std.zig.Ast,
+    idx: std.zig.Ast.Node.Index,
+) ![]const u8 {
+    const name = ast.tokenSlice(ast.firstToken(idx) - 2);
+    return if (name[0] == '@') // Escaping something, like @"hello bois"
+        try std.zig.string_literal.parseAlloc(alloc, name[1..])
+    else
+        try alloc.dupe(u8, name);
+}

@@ -25,6 +25,7 @@
 ##### sorted by Precedence
 
 - zig.ver: A file that contains the zig version, nothing more.
+- build.zig.zon: More specifically the minimum_zig_version option
 - (zigd directory)/config
 
 ### In the config there is also an order
@@ -48,6 +49,10 @@ default=0.13.0
 ```
 
 ### Fun fact, if you are in `/home/john/work/some_project/some_deeper_project`, it will still return 0.5.0, because zigd searches for paths recursively! :O 
+
+## Build
+
+### `zig build`
 
 ## An Example Usage
 
