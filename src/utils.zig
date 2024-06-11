@@ -58,14 +58,21 @@ pub inline fn createDirectoryIgnoreExist(path: []const u8) !void {
     };
 }
 
-pub inline fn existsReadFileCwd(allocator: std.mem.Allocator, cwd_path: []const u8) !?[]u8 {
+pub inline fn existsOpenFile(cwd_path: []const u8, flags: std.fs.File.OpenFlags) !?std.fs.File {
+    return std.fs.cwd().openFile(cwd_path, flags) catch |e| switch (e) {
+        std.fs.File.OpenError.FileNotFound => null,
+        else => e,
+    };
+}
+
+pub inline fn existsReadFile(allocator: std.mem.Allocator, cwd_path: []const u8) !?[]u8 {
     return std.fs.cwd().readFileAlloc(allocator, cwd_path, std.math.maxInt(usize)) catch |e| switch (e) {
         std.fs.File.OpenError.FileNotFound => null,
         else => e,
     };
 }
 
-pub inline fn existsReadFileCwdSentinel(allocator: std.mem.Allocator, cwd_path: [:0]const u8) !?[:0]u8 {
+pub inline fn existsReadFileSentinel(allocator: std.mem.Allocator, cwd_path: [:0]const u8) !?[:0]u8 {
     return std.fs.cwd().readFileAllocOptions(allocator, cwd_path, std.math.maxInt(usize), null, 1, 0) catch |e| switch (e) {
         std.fs.File.OpenError.FileNotFound => null,
         else => e,

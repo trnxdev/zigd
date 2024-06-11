@@ -22,7 +22,7 @@ pub fn main() !void {
     defer config.deinit();
 
     var zig_version: zigdcore.ZigVersion = v: {
-        if (try utils.existsReadFileCwd(allocator, "zig.ver")) |zig_ver| {
+        if (try utils.existsReadFile(allocator, "zig.ver")) |zig_ver| {
             // Can't error so no need for errdefer in this scope
             break :v zigdcore.ZigVersion{
                 .as_string = zig_ver,
@@ -30,7 +30,7 @@ pub fn main() !void {
             };
         }
 
-        if (try utils.existsReadFileCwdSentinel(allocator, "build.zig.zon")) |build_zig_zon| {
+        if (try utils.existsReadFileSentinel(allocator, "build.zig.zon")) |build_zig_zon| {
             defer allocator.free(build_zig_zon);
 
             if (try zon_minimum_version(allocator, build_zig_zon)) |zonver| {
@@ -62,7 +62,7 @@ pub fn main() !void {
         return;
     };
 
-    zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true);
+    zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true, zigd_path, true);
     defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" ++ utils.binary_ext });

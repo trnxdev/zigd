@@ -6,6 +6,7 @@ const Command = enum {
     install,
     setup,
     exists,
+    @"recache-master",
     help,
     version,
 };
@@ -28,6 +29,7 @@ pub fn main() !void {
             .install => install(allocator, args),
             .setup => setup(allocator, args),
             .exists => exists(allocator, args),
+            .@"recache-master" => recache_master(allocator),
             .help => help_menu(),
             .version => version(),
         };
@@ -44,6 +46,7 @@ fn help_menu() !void {
         \\install [version] - Install a zig version
         \\setup [version] - First time setup (creates a config and installs the version)
         \\exists [version] - Check if a zig version is installed on the system
+        \\recache-master - Re-cache the master version
         \\help - Outputs this help Menu
         \\version - Outputs zigd version
         \\
@@ -69,16 +72,16 @@ fn install(allocator: std.mem.Allocator, args: []const []const u8) !void {
         return;
     }
 
-    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
+    const zigd_path = try zigdcore.getZigdPath(allocator);
+    defer allocator.free(zigd_path);
+
+    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false, zigd_path, true);
     defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     try std.io.getStdOut().writer().print("Installing zig version {s}\n", .{zig_version});
 
     const download_url = try zigdcore.downloadUrlFromVersion(allocator, zig_version.as_string, zig_version.source == .Master);
     defer allocator.free(download_url);
-
-    const zigd_path = try zigdcore.getZigdPath(allocator);
-    defer allocator.free(zigd_path);
 
     if (!try zigdcore.install_zig(allocator, download_url, zigd_path, zig_version)) {
         std.log.err("Installation failed!", .{});
@@ -117,7 +120,7 @@ fn setup(allocator: std.mem.Allocator, args: []const []const u8) !void {
         }
     }
 
-    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
+    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false, zigd_path, true);
     defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     if (zig_version.source == .Master) {
@@ -168,10 +171,10 @@ fn exists(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const zigd_path = try zigdcore.getZigdPath(allocator);
     defer allocator.free(zigd_path);
 
-    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
+    var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false, zigd_path, true);
     defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
-    const version_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", args[2] });
+    const version_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string });
     defer allocator.free(version_path);
 
     if (try utils.isDirectory(version_path)) {
@@ -179,4 +182,20 @@ fn exists(allocator: std.mem.Allocator, args: []const []const u8) !void {
     } else {
         try std.io.getStdOut().writer().writeAll("No!\n");
     }
+}
+
+fn recache_master(allocator: std.mem.Allocator) !void {
+    const zigd_path = try zigdcore.getZigdPath(allocator);
+    defer allocator.free(zigd_path);
+
+    const master = try zigdcore.fetchMaster(allocator, zigd_path, false);
+    defer allocator.free(master);
+
+    const cache_path = try zigdcore.getCachePath(allocator, zigd_path);
+    defer allocator.free(cache_path);
+
+    const cache_file = try zigdcore.getCacheFile(cache_path);
+    defer cache_file.close();
+
+    try cache_file.writer().writeAll(master);
 }

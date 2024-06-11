@@ -84,7 +84,46 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
     return true;
 }
 
-pub fn masterFromIndex(allocator: std.mem.Allocator) ![]const u8 {
+pub fn getCachePath(allocator: std.mem.Allocator, zigd_path: []const u8) ![]u8 {
+    return try std.fs.path.join(allocator, &.{ zigd_path, "cached_master" });
+}
+
+pub fn getCacheFile(cache_path: []const u8) !std.fs.File {
+    return try utils.existsOpenFile(cache_path, .{ .mode = .read_write }) orelse v: {
+        break :v try std.fs.createFileAbsolute(cache_path, .{
+            .read = true,
+            .truncate = false,
+            .exclusive = true,
+        });
+    };
+}
+
+// TODO: Add an command to re-cache or disable cache
+// Caller frees the memory
+pub fn fetchMaster(allocator: std.mem.Allocator, zigd_path: []const u8, allow_cache: bool) ![]u8 {
+    const cache_path: ?[]const u8 = if (allow_cache)
+        try getCachePath(allocator, zigd_path)
+    else
+        null;
+    defer if (cache_path) |cp| allocator.free(cp);
+
+    const cache_file: ?std.fs.File = if (allow_cache) try getCacheFile(cache_path orelse unreachable) else null;
+    defer if (cache_file) |cf| cf.close();
+
+    if (allow_cache) {
+        const file_stat = try (cache_file orelse unreachable).stat();
+
+        // If last modified less than 12 hours ago
+        if (file_stat.mtime > std.time.nanoTimestamp() - (12 * std.time.ns_per_hour)) {
+            const ver = try (cache_file orelse unreachable).readToEndAlloc(allocator, std.math.maxInt(usize));
+
+            if (!std.meta.isError(std.SemanticVersion.parse(ver)))
+                return ver;
+
+            allocator.free(ver);
+        }
+    }
+
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
@@ -121,6 +160,9 @@ pub fn masterFromIndex(allocator: std.mem.Allocator) ![]const u8 {
         return error.VersionNotString;
     }
 
+    if (allow_cache)
+        try (cache_file orelse unreachable).writer().writeAll(version.string);
+
     return try allocator.dupe(u8, version.string);
 }
 
@@ -146,7 +188,7 @@ pub const ZigVersion = struct {
     };
 
     // Handles the "master" case
-    pub fn parse(allocator: std.mem.Allocator, str: []const u8, source: *Source, free_instant_if_zigver: bool) !@This() {
+    pub fn parse(allocator: std.mem.Allocator, str: []const u8, source: *Source, free_instant_if_zigver: bool, zigd_path: []const u8, allow_cache: bool) !@This() {
         var zig_version: @This() = .{
             .as_string = str,
             .source = source.*,
@@ -157,7 +199,7 @@ pub const ZigVersion = struct {
                 allocator.free(str);
 
             zig_version = .{
-                .as_string = try masterFromIndex(allocator),
+                .as_string = try fetchMaster(allocator, zigd_path, allow_cache),
                 .source = .{ .Master = source },
             };
         }

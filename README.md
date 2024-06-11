@@ -13,7 +13,8 @@
 | :---------------: | :----------------------------------------------------------: |
 | install [version] | Installs a zig version                                       |
 | setup [version]   | Installs a zig version and sets it as default in the config. |
-| exists  [version] | Check if a zig version is installed on the system            |
+| exists [version]  | Check if a zig version is installed on the system            |
+| recache-master    | Re-cache the master version                                  |
 | help              | Help screen                                                  |
 | version           | Outputs zigd version                                         |
  
@@ -54,6 +55,10 @@ default=0.13.0
 ## Build
 
 ### `zig build`
+
+## Important Stuff to know
+
+### `master` version is cached for 12 hours at (zigd directory)/cached_master, you can use `zigd recache-master` to update it.
 
 ## An Example Usage
 
