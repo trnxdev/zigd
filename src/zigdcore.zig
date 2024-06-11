@@ -2,8 +2,27 @@ const std = @import("std");
 const utils = @import("utils.zig");
 
 /// Version cannot be master!
-/// Returns the path to the zig binary
-pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, install_path: []const u8, version: []const u8) !void {
+/// Returns a bool if it installed/reinstalled zig
+pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, install_path: []const u8, zig_version: ZigVersion) !bool {
+    const final_destination = try std.fs.path.join(allocator, &.{ install_path, "versions", zig_version.as_string });
+    defer allocator.free(final_destination);
+
+    if (try utils.isDirectory(final_destination)) {
+        o: while (true) {
+            const byte = try std.io.getStdIn().reader().readByte();
+            std.log.warn("Version {} is already installed on your system! Re-install? (y/n)", .{zig_version});
+
+            switch (byte) {
+                'y' => {
+                    try std.fs.deleteTreeAbsolute(final_destination);
+                    break :o;
+                },
+                'n' => return false,
+                else => continue :o,
+            }
+        }
+    }
+
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
@@ -23,10 +42,7 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
     if (req.response.status != .ok)
         return error.ResponseWasNotOk;
 
-    const final_destination = try std.fs.path.join(allocator, &.{ install_path, "versions", version });
-    defer allocator.free(final_destination);
-
-    try utils.createDirectoryIfNotExist(final_destination);
+    try utils.createDirectoryIgnoreExist(final_destination);
 
     if (utils.os_tag == .windows) {
         // std.zip has no strip components :( so we have to do this mess...
@@ -64,7 +80,8 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
 
         try std.tar.pipeToFileSystem(final_dest_dir, xz_decompressor.reader(), .{ .strip_components = 1 });
     }
-    return;
+
+    return true;
 }
 
 pub fn masterFromIndex(allocator: std.mem.Allocator) ![]const u8 {

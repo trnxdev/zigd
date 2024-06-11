@@ -3,11 +3,11 @@ const builtin = @import("builtin");
 
 pub const cpu_arch: []const u8 = switch (builtin.cpu.arch) {
     .x86, .powerpc64le, .x86_64, .aarch64, .riscv64 => |e| @tagName(e),
-    else => @compileError("Unsupported CPU Architecture"),
+    else => @compileError("Unsupported CPU Architecture, if you think your CPU Architecture is supported file an issue on github."),
 };
 pub const os: []const u8 = switch (os_tag) {
     .windows, .linux, .macos => |e| @tagName(e),
-    else => @compileError("Unsupported OS, if you think your OS supported file an issue on github."),
+    else => @compileError("Unsupported OS, if you think your OS is supported file an issue on github."),
 };
 pub const os_tag = builtin.os.tag;
 pub const url_platform = os ++ "-" ++ cpu_arch;

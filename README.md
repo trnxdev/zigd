@@ -9,12 +9,13 @@
 
 ### Commands:
 
-| Command           | What does it do?                                  |
-| :---------------: | :-----------------------------------------------: |
-| help              | Help screen                                       |
-| version           | Outputs zigd version                              |
-| install [version] | Installs a zig version                            |
-| exists  [version] | Check if a zig version is installed on the system |
+| Command           | What does it do?                                             |
+| :---------------: | :----------------------------------------------------------: |
+| install [version] | Installs a zig version                                       |
+| setup [version]   | Installs a zig version and sets it as default in the config. |
+| exists  [version] | Check if a zig version is installed on the system            |
+| help              | Help screen                                                  |
+| version           | Outputs zigd version                                         |
  
 ## zigdemu
 

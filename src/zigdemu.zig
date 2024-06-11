@@ -78,7 +78,11 @@ pub fn main() !void {
             const download_url = try zigdcore.downloadUrlFromVersion(allocator, zig_version.as_string, zig_version.source == .Master);
             defer allocator.free(download_url);
 
-            try zigdcore.install_zig(allocator, download_url, zigd_path, zig_version.as_string);
+            if (!try zigdcore.install_zig(allocator, download_url, zigd_path, zig_version)) {
+                std.log.err("Installation failed! Exiting...", .{});
+                return;
+            }
+
             break :o;
         }
 
