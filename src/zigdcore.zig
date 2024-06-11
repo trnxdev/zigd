@@ -49,19 +49,19 @@ pub fn install_zig(allocator: std.mem.Allocator, download_url: []const u8, insta
         const w_path_duped = try allocator.dupe(u8, w_path.name);
         defer allocator.free(w_path_duped);
 
-        if ((try tempstrg.next()) != null)    
+        if ((try tempstrg.next()) != null)
             return error.InstallationWasSabotaged;
 
         try temporary_storage.rename(w_path_duped, final_destination);
         temporary_storage.close();
         try std.fs.cwd().deleteDir(temp_name);
-    } else {    
+    } else {
         var final_dest_dir = try std.fs.openDirAbsolute(final_destination, .{});
         defer final_dest_dir.close();
 
         var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
         defer xz_decompressor.deinit();
-    
+
         try std.tar.pipeToFileSystem(final_dest_dir, xz_decompressor.reader(), .{ .strip_components = 1 });
     }
     return;
@@ -121,9 +121,10 @@ pub const ZigVersion = struct {
 
     pub const Source = union(enum) {
         UserArg, // Zigd Cli exclusive
-        Zigver,
-        WorkspaceVer,
-        DefaultVer,
+        Zigver, // zig.ver file
+        Zonver, // build.zig.zon, minimum_zig_version field
+        WorkspaceVer, // config, path
+        DefaultVer, // config, default
         Master: *Source,
     };
 
@@ -164,9 +165,9 @@ pub const ZigVersion = struct {
         }
     }
 
-    pub fn deinitIfMasterOrZigver(self: @This(), allocator: std.mem.Allocator) void {
+    pub fn deinitIfMasterOrZigverOrZonver(self: @This(), allocator: std.mem.Allocator) void {
         switch (self.source) {
-            .Master, .Zigver => allocator.free(self.as_string),
+            .Master, .Zigver, .Zonver => allocator.free(self.as_string),
             else => {},
         }
     }
@@ -186,7 +187,7 @@ pub fn getZigdPath(allocator: std.mem.Allocator) ![]u8 {
                 break :v try std.fs.path.join(allocator, &.{ userprofile, ".zigd" });
             }
         }
-        
+
         if (env_map.get("HOME")) |home| {
             break :v try std.fs.path.join(allocator, &.{ home, ".zigd" });
         }

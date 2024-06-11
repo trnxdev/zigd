@@ -67,7 +67,7 @@ fn install(allocator: std.mem.Allocator, args: []const []const u8) !void {
     }
 
     var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
-    defer zig_version.deinitIfMasterOrZigver(allocator);
+    defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     try std.io.getStdOut().writer().print("Installing zig version {s}\n", .{zig_version});
 
@@ -95,7 +95,7 @@ fn exists(allocator: std.mem.Allocator, args: []const []const u8) !void {
     defer allocator.free(zigd_path);
 
     var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false);
-    defer zig_version.deinitIfMasterOrZigver(allocator);
+    defer zig_version.deinitIfMasterOrZigverOrZonver(allocator);
 
     const version_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", args[2] });
     defer allocator.free(version_path);
