@@ -52,6 +52,11 @@ default=0.13.0
 
 ### Fun fact, if you are in `/home/john/work/some_project/some_deeper_project`, it will still return 0.5.0, because zigd searches for paths recursively! :O 
 
+## Install
+
+### You must have `wget` and `curl` installed :D
+### `curl -fsSL https://raw.githubusercontent.com/trnxdev/zigd/main/install.sh | bash`
+
 ## Build
 
 ### `zig build`
