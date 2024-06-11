@@ -39,8 +39,16 @@ pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download
     try req.finish();
     try req.wait();
 
-    if (req.response.status != .ok)
+    if (req.response.status != .ok) {
+        std.log.err(
+            \\
+            \\Fetching the version failed!
+            \\Does the version still exist in zig builds?
+            \\Is the version correct?
+            \\Response Code: {s} {d}
+        , .{ req.response.status.phrase() orelse "???", req.response.status });
         return error.ResponseWasNotOk;
+    }
 
     const temp_dir_path = try std.fs.path.join(allocator, &.{ zigd_path, "tmp" });
     defer allocator.free(temp_dir_path);
@@ -155,8 +163,13 @@ pub fn fetchMaster(allocator: std.mem.Allocator, zigd_path: []const u8, allow_ca
 
     const resp = req.response;
 
-    if (resp.status != .ok)
+    if (resp.status != .ok) {
+        std.log.err("Fetching the index failed\nResponse Code: {s} {d}", .{
+            req.response.status.phrase() orelse "???",
+            req.response.status,
+        });
         return error.ResponseWasNotOk;
+    }
 
     const body = try req.reader().readAllAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(body);
