@@ -15,6 +15,8 @@ pub fn main() !void {
     const zigd_path = try zigdcore.getZigdPath(allocator);
     defer allocator.free(zigd_path);
 
+    try zigdcore.garbage_collect_tempdir(zigd_path);
+
     const config_path = try std.fs.path.join(allocator, &.{ zigd_path, "config" });
     defer allocator.free(config_path);
 
@@ -78,7 +80,7 @@ pub fn main() !void {
             const download_url = try zigdcore.downloadUrlFromVersion(allocator, zig_version.as_string, zig_version.source == .Master);
             defer allocator.free(download_url);
 
-            if (!try zigdcore.install_zig(allocator, download_url, zigd_path, zig_version)) {
+            if (!try zigdcore.install_zig(allocator, zigd_path, download_url, zig_version)) {
                 std.log.err("Installation failed! Exiting...", .{});
                 return;
             }
