@@ -17,8 +17,8 @@ pub fn main() !void {
 
     try zigdcore.garbage_collect_tempdir(zigd_path);
 
-    const config_path = try std.fs.path.join(allocator, &.{ zigd_path, "config" });
-    defer allocator.free(config_path);
+    var config_path_dir: zigdcore.PathBuf = undefined;
+    const config_path = utils.join_path(&config_path_dir, &.{ zigd_path, "config" });
 
     var config = try Config.load_from(allocator, config_path);
     defer config.deinit();
@@ -67,8 +67,8 @@ pub fn main() !void {
     zig_version = try zigdcore.ZigVersion.parse(allocator, zig_version.as_string, &zig_version.source, true, zigd_path, true);
     defer zig_version.deinitIfMightBeAllocated(allocator);
 
-    const zig_binary_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string, "zig" ++ utils.binary_ext });
-    defer allocator.free(zig_binary_path);
+    var bin_path: zigdcore.PathBuf = undefined;
+    const zig_binary_path = utils.join_path(&bin_path, &.{ zigd_path, zigdcore.VersionsByZigd, zig_version.as_string, "zig" ++ utils.binary_ext });
 
     if (!(try utils.isFile(zig_binary_path))) o: {
         const zig_version_path = std.mem.lastIndexOfScalar(u8, zig_binary_path, std.fs.path.sep) orelse unreachable;

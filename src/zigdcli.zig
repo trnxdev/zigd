@@ -103,8 +103,8 @@ fn setup(allocator: std.mem.Allocator, args: []const []const u8, zigd_path: []co
         return;
     }
 
-    const config_path = try std.fs.path.join(allocator, &.{ zigd_path, "config" });
-    defer allocator.free(config_path);
+    var config_path_buf: zigdcore.PathBuf = undefined;
+    const config_path = utils.join_path(&config_path_buf, &.{ zigd_path, "config" });
 
     if (try utils.isFile(config_path)) {
         o: while (true) {
@@ -170,8 +170,8 @@ fn exists(allocator: std.mem.Allocator, args: []const []const u8, zigd_path: []c
     var zig_version = try zigdcore.ZigVersion.parse(allocator, args[2], &user_arg, false, zigd_path, true);
     defer zig_version.deinitIfMightBeAllocated(allocator);
 
-    const version_path = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string });
-    defer allocator.free(version_path);
+    var version_path_buf: zigdcore.PathBuf = undefined;
+    const version_path = utils.join_path(&version_path_buf, &.{ zigd_path, zigdcore.VersionsByZigd, zig_version.as_string });
 
     if (try utils.isDirectory(version_path)) {
         try std.io.getStdOut().writer().writeAll("Yes!\n");
@@ -184,8 +184,8 @@ fn recache_master(allocator: std.mem.Allocator, zigd_path: []const u8) !void {
     const master = try zigdcore.fetchMaster(allocator, zigd_path, false);
     defer allocator.free(master);
 
-    const cache_path = try zigdcore.getCachePath(allocator, zigd_path);
-    defer allocator.free(cache_path);
+    var cache_path_buf: zigdcore.PathBuf = undefined;
+    const cache_path = utils.join_path(&cache_path_buf, &.{ zigd_path, zigdcore.CacheByZigd });
 
     const cache_file = try zigdcore.getCacheFile(cache_path);
     defer cache_file.close();

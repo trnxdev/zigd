@@ -1,11 +1,17 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
+pub const PathBuf = [std.fs.MAX_PATH_BYTES]u8;
+
+pub const TempByZigd = "tmp";
+pub const CacheByZigd = "cached_master";
+pub const VersionsByZigd = "versions";
+
 /// Version cannot be master!
 /// Returns a bool if it installed/reinstalled zig
 pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download_url: []const u8, zig_version: ZigVersion) !bool {
-    const final_destination = try std.fs.path.join(allocator, &.{ zigd_path, "versions", zig_version.as_string });
-    defer allocator.free(final_destination);
+    var final_dest_buf: PathBuf = undefined;
+    const final_destination = utils.join_path(&final_dest_buf, &.{ zigd_path, VersionsByZigd, zig_version.as_string });
 
     if (try utils.isDirectory(final_destination)) {
         o: while (true) {
@@ -50,8 +56,8 @@ pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download
         return error.ResponseWasNotOk;
     }
 
-    const temp_dir_path = try std.fs.path.join(allocator, &.{ zigd_path, "tmp" });
-    defer allocator.free(temp_dir_path);
+    var temp_dir_buf: PathBuf = undefined;
+    const temp_dir_path = utils.join_path(&temp_dir_buf, &.{ zigd_path, "tmp" });
 
     try utils.createDirectoryIgnoreExist(temp_dir_path);
 
@@ -63,7 +69,7 @@ pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download
 
     var temp_storage_closed: bool = false;
     var temporary_storage = try temp_dir.makeOpenPath(temp_name, .{
-        .iterate = true,
+        .iterate = utils.os_tag == .windows,
     });
     errdefer if (!temp_storage_closed) temporary_storage.close();
 
@@ -88,7 +94,7 @@ pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download
         try temporary_storage.rename(w_path_duped, final_destination);
         temporary_storage.close();
         temp_storage_closed = true;
-        try std.fs.cwd().deleteDir(temp_name);
+        try temp_dir.deleteTree(temp_name);
     } else {
         var xz_decompressor = try std.compress.xz.decompress(allocator, req.reader());
         defer xz_decompressor.deinit();
@@ -104,7 +110,7 @@ pub fn install_zig(allocator: std.mem.Allocator, zigd_path: []const u8, download
 }
 
 pub fn getCachePath(allocator: std.mem.Allocator, zigd_path: []const u8) ![]u8 {
-    return try std.fs.path.join(allocator, &.{ zigd_path, "cached_master" });
+    return try std.fs.path.join(allocator, &.{ zigd_path, CacheByZigd });
 }
 
 pub fn getCacheFile(cache_path: []const u8) !std.fs.File {
@@ -292,14 +298,6 @@ pub fn getZigdPath(allocator: std.mem.Allocator) ![]u8 {
 
 // I'm bored, that's why im gonna do it the messy style
 pub fn garbage_collect_tempdir(zigd_path: []const u8) !void {
-    var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    var idx: usize = 0;
-    @memcpy(buf[0 .. idx + zigd_path.len], zigd_path);
-    idx += zigd_path.len;
-    buf[idx] = std.fs.path.sep;
-    idx += 1;
-    @memcpy(buf[idx .. idx + "tmp".len], "tmp");
-    idx += "tmp".len;
-
-    try std.fs.deleteTreeAbsolute(buf[0..idx]);
+    var buf: PathBuf = undefined;
+    try std.fs.deleteTreeAbsolute(utils.join_path(&buf, &.{ zigd_path, "tmp" }));
 }
