@@ -224,6 +224,11 @@ pub const ZigVersion = struct {
             .source = source.*,
         };
 
+        if (std.meta.isError(std.SemanticVersion.parse(zig_version.as_string))) {
+            std.log.err("The version provided {}, could not be parsed as a semver", .{zig_version});
+            return error.NotASemver;
+        }
+
         if (std.mem.eql(u8, zig_version.as_string, "master")) {
             if (free_instant_if_zigver and source.* == .DotZigversion)
                 allocator.free(str);

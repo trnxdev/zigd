@@ -104,11 +104,14 @@ pub fn exec(allocator: std.mem.Allocator, zig_binary: []const u8, args: [][:0]u8
 pub fn join_path(buf: []u8, joins: []const []const u8) []const u8 {
     var idx: usize = 0;
 
-    for (joins) |j| {
+    for (joins, 0..) |j, loop_i| {
         @memcpy(buf[idx .. idx + j.len], j);
         idx += j.len;
-        buf[idx] = std.fs.path.sep;
-        idx += 1; // sep is usually one char
+
+        if (loop_i != joins.len -| 1) {
+            buf[idx] = std.fs.path.sep;
+            idx += 1; // sep is usually one char
+        }
     }
 
     return buf[0..idx];
