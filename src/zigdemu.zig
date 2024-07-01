@@ -20,7 +20,6 @@ pub fn main() !void {
     var config_path_dir: zigdcore.PathBuf = undefined;
     const config_path = utils.join_path(&config_path_dir, &.{ zigd_path, "config" });
 
-    std.debug.print("{s}", .{config_path});
     var config = try Config.load_from(allocator, config_path);
     defer config.deinit();
 
