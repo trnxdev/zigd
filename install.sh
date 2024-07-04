@@ -5,20 +5,26 @@ if ! [ -x "$(command -v wget)" ]; then
     exit 1
 fi
 
+if [[ -z "${ZIGD_DIRECTORY}" ]]; then
+  ZIGD_PATH=$HOME/.zigd
+else
+  ZIGD_PATH=$ZIGD_DIRECTORY
+fi
+
 # Setup
-mkdir -p $HOME/.zigd/bin
+mkdir -p $ZIGD_PATH/bin
 
 # Zigd
-wget https://github.com/trnxdev/zigd/releases/latest/download/zigd -O $HOME/.zigd/bin/zigd
-chmod +x $HOME/.zigd/bin/zigd
+wget https://github.com/trnxdev/zigd/releases/latest/download/zigd -O $ZIGD_PATH/bin/zigd
+chmod +x $ZIGD_PATH/bin/zigd
 
 # Zigdemu
-wget https://github.com/trnxdev/zigd/releases/latest/download/zigdemu -O $HOME/.zigd/bin/zigdemu
-chmod +x $HOME/.zigd/bin/zigdemu
+wget https://github.com/trnxdev/zigd/releases/latest/download/zigdemu -O $ZIGD_PATH/bin/zigdemu
+chmod +x $ZIGD_PATH/bin/zigdemu
 
 # Yipee! You installed zigd
 echo 'Succesfully installed! Now do `zigd setup [a zig version of your choice]`'
-echo 'Also, you have to add `export PATH=$HOME/.zigd/bin:$PATH` to your ~/.bashrc'
+echo "Also, you have to add `export PATH=${ZIGD_PATH}/bin:$PATH` to your ~/.bashrc"
 echo 'and then run `source ~/.bashrc` in this terminal to start using zigd!'
 
 exit 0
