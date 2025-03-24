@@ -1,7 +1,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
-pub const PathBuf = [std.fs.MAX_PATH_BYTES]u8;
+pub const PathBuf = [std.fs.max_path_bytes]u8;
 
 pub const TempByZigd = "tmp";
 pub const CacheByZigd = "cached_master";

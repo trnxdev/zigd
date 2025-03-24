@@ -1,7 +1,8 @@
 .{
-    .name = "zigd",
-    .version = "0.0.8",
-    .minimum_zig_version = "0.13.0",
+    .name = .zigd,
+    .fingerprint = 0x2a3376ae00092ee, 
+    .version = "0.0.9",
+    .minimum_zig_version = "0.14.0",
     .paths = .{
         "build.zig",
         "build.zig.zon",
